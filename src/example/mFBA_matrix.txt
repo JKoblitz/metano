@@ -1,0 +1,27 @@
+NAME	xanthine 	(1,4)-beta-xylobiose 	(R)-acetoin 	(S)-lactic_acid 	D-arabinofuranose 	D-fucose 	D-mannose 	L-alanine 	L-arabinobiose 	L-arabinofuranose 	L-arginine 	L-asparagine 	L-aspartate 	L-fucopyranose 
+LB T_flux_xanthine 	-1													
+LB T_trans_xanthine 	-1													
+LB T_flux_(1,4)-beta-xylobiose 		-1												
+UB T_ABC-transporter_(1,4)-beta-xylobiose 		-1												
+LB T_flux_(R)-acetoin 			-1											
+UB T_ABC-transporter_(R)-acetoin 			-1											
+LB T_flux_(S)-lactic_acid 				-1										
+LB T_flux_D-arabinofuranose 					-1									
+UB T_ABC-transporter_D-arabinofuranose 					-1									
+LB T_flux_D-fucose 						-1								
+UB T_ABC-transporter_D-fucose 						1								
+LB T_flux_D-mannose 							-1							
+UB T_ABC-transporter_D-mannose 							-1							
+LB T_flux_L-alanine 								-1						
+UB T_ABC-transporter_L-alanine 								-1						
+LB T_flux_L-arabinobiose 									-1					
+UB T_ABC-transporter_L-arabinobiose 									-1					
+LB T_flux_L-arabinofuranose 										-1				
+UB T_ABC-transporter_L-arabinofuranose 										-1				
+LB T_flux_L-arginine 											-1			
+UB T_ABC-transporter_L-arginine 											-1			
+LB T_flux_L-asparagine 												-1		
+LB T_flux_L-aspartate 													-1	
+UB T_ABC-transporter_L-aspartate 													-1	
+LB T_flux_L-fucopyranose 														-1
+UB T_ABC-transporter_L-fucopyranose 														1
