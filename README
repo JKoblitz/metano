@@ -1,15 +1,18 @@
 metano - A Toolkit for Metabolic Network Analysis and Optimization
-Copyright (C) 2010-2012 Alexander Riemer and Rene Rex
+Copyright (C) 2010-2017 Alexander Riemer, Rene Rex, and Julia Helmecke
+
+For installation insttuctions and further information about metano, 
+please visit http://metano.tu-bs.de.
 
 Any correspondence regarding metano should be addressed to
 
-Alexander Riemer
+Julia Helmecke
 Technische Universitaet Carolo-Wilhelmina zu Braunschweig
 Department of Bioinformatics and Biochemistry
-Langer Kamp 19b
+Rebenring 56
 38106 Braunschweig, Germany
-Phone:  +49 531 391-8306
-E-Mail: al.riemer@tu-bs.de
+Phone:  +49 531 391-55163
+E-Mail: julia.helmecke@tu-bs.de
 
 
 metano is free software: you can redistribute it and/or modify
