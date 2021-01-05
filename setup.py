@@ -3,20 +3,26 @@ from setuptools.command import sdist
 
 sdist.walk_revctrl = lambda **kwargs: []
 
+
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
 setup(
-    name = "metano",
-    version = "1.2.0",
-    description = "metano - A Toolkit for Metabolic Network Analysis and "
-                  "Optimization",
-    author = "Alexander Riemer and Julia Helmecke",
-    author_email = "julia.helmecke@tu-bs.de",
+    name="metano",
+    version="1.3.0",
+    description="metano - A Toolkit for Metabolic Network Analysis and "
+    "Optimization",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    author="Julia Helmecke and Alexander Riemer",
+    author_email="julia.helmecke@tu-bs.de",
     url='http://metano.tu-bs.de/',
-    packages = ["metano", "cvxmod"],
-    package_dir = {"metano" : "src", "cvxmod" : "cvxmod"},
+    packages=["metano"],
+    package_dir={"metano": "src"},
     package_data={
-        "metano" : ["example/*.txt", "example/*.sh"]
-        },
-    entry_points = {
+        "metano": ["example/*.txt", "example/*.sh", "example/*.ini"]
+    },
+    entry_points={
         "console_scripts": [
             'deadends.py = metano.deadends:main',
             'fba.py = metano.fba:main',
@@ -32,26 +38,23 @@ setup(
             'moment.py = metano.moment:main',
             'to_check_constraints.py = metano.to_check_constraints:main',
             'to_diff_solutions.py = metano.to_diff_solutions:main',
+            'to_evaluate_objective.py = metano.to_evaluate_objective:main',
             'to_fix_names.py = metano.to_fix_names:main',
             'to_list_active_metab.py = metano.to_list_active_metab:main',
             'to_rea2m.py = metano.to_rea2m:main',
-  ]
+            'to_scatterplot.py = metano.to_scatterplot:main',
+        ]
     },
-    classifiers = [
+    classifiers=[
         "License :: OSI Approved :: GNU General Public License (GPL)",
-        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
         "Development Status :: 5 - Production/Stable",
-# Development Status :: 2 - Pre-Alpha
-# Development Status :: 3 - Alpha
-# Development Status :: 4 - Beta
-# Development Status :: 5 - Production/Stable
-# Development Status :: 6 - Mature
         "Intended Audience :: Science/Research",
         "Topic :: Scientific/Engineering :: Bio-Informatics",
     ],
-    keywords = "genome-scale metabolic models flux balance analysis",
-    license = "GPL",
-    install_requires = [
+    keywords="genome-scale metabolic models flux balance analysis fba",
+    license="GPL",
+    install_requires=[
         "numpy",
         "swiglpk",
         "pymprog>=1.0",
@@ -59,6 +62,6 @@ setup(
         "scipy",
         "openopt",
         "cvxpy",
-        "cvxopt<=1.1.8",
-]
-    )
+        "cvxopt",
+    ]
+)
