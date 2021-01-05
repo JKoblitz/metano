@@ -12,7 +12,7 @@ and calls an appropriate solver.
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -29,21 +29,21 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
-# TODO Release:
-# - remove case 'Linear function but nonlinear constraints'
-# - remove commented out code
-
+from builtins import range
+from builtins import object
 import optparse
-from reactionparser import ReactionParser
-from paramparser import ParamParser
-from metabolicmodel import MetabolicModel
-from metabolicflux import MetabolicFlux
-from linearproblem import LinearProblem, _GLPK, _OOGLPK
-from nonlinearproblem import NonLinearProblem
-from objectivefun import biomass_per_flux, neg_grad_biomass_per_flux
-from startpointiterator import StartPointIterator
-from defines import FbaParam, printHistogram, COPYRIGHT_VERSION_STRING
+from metano.reactionparser import ReactionParser
+from metano.paramparser import ParamParser
+from metano.metabolicmodel import MetabolicModel
+from metano.metabolicflux import MetabolicFlux
+from metano.linearproblem import LinearProblem, _GLPK, _OOGLPK
+from metano.nonlinearproblem import NonLinearProblem
+from metano.objectivefun import biomass_per_flux, neg_grad_biomass_per_flux
+from metano.startpointiterator import StartPointIterator
+from metano.defines import FbaParam, printHistogram, COPYRIGHT_VERSION_STRING
 from numpy import array, insert, vstack, dot
 import os
 
@@ -67,7 +67,7 @@ class FbAnalyzer(object):
     """ Class for flux-balance analysis
     """
 
-    def __init__(self, solver="default"):
+    def __init__(self, solver="default", verbose=True):
         """ initialize FBA class
 
         Keyword arguments:
@@ -75,7 +75,7 @@ class FbAnalyzer(object):
         solver    -- name of the solver to be used for the LP/QP/NLP
         """
         self.solver = solver
-
+        self.verb = verbose
 
     @staticmethod
     def splitFluxes(matrix, reaction_names, lb, ub):
@@ -138,7 +138,6 @@ class FbAnalyzer(object):
 
         return matrixSplit, reactionsSplit, lbSplit, ubSplit
 
-
     @staticmethod
     def splitFluxVector(vec, reaction_names, reactionsSplit):
         """ split the given vector as described by reactionsSplit
@@ -167,9 +166,9 @@ class FbAnalyzer(object):
                     vecSplit.append(0.)
             elif vec[i] > 0.:
                 if indexPos is None:
-                    print rea, indexPos, indexNeg
+                    print(rea, indexPos, indexNeg)
                     raise ValueError("Value %u (%g) out of range in split "
-                                "vector (must not be positive)" % (i, vec[i]))
+                                     "vector (must not be positive)" % (i, vec[i]))
                 vecSplit.append(vec[i])
                 if indexNeg is not None:
                     vecSplit.append(0.)
@@ -178,11 +177,10 @@ class FbAnalyzer(object):
                     vecSplit.append(0.)
                 if indexNeg is None:
                     raise ValueError("Value %u (%g) out of range in split "
-                                "vector (must not be negative)" % (i, vec[i]))
+                                     "vector (must not be negative)" % (i, vec[i]))
                 vecSplit.append(-vec[i])
 
         return vecSplit
-
 
     @staticmethod
     def rejoinFluxes(solutionSplit, reactionsSplit, reactions):
@@ -221,7 +219,6 @@ class FbAnalyzer(object):
 
         return solution
 
-
     @staticmethod
     def makeConstraintMatrices(matrix, eqs, ineqs):
         """ transform the given matrix and equality and inequality constraints
@@ -250,7 +247,6 @@ class FbAnalyzer(object):
 
         return Aeq, beq, Aineq, bineq
 
-
     def run(self, reactions, matrix, lb, ub, fbaParams):
         """ analyze objective function, and solve the LP/QP/NLP
 
@@ -278,8 +274,8 @@ class FbAnalyzer(object):
         # Get additional linear equality and inequality constraints
         try:
             Aeq, beq, Aineq, bineq = self.makeConstraintMatrices(matrix,
-                *ParamParser.linConstraintsToVectors(fbaParams.linConstraints,
-                                                     reactions, nCols))
+                                                                 *ParamParser.linConstraintsToVectors(fbaParams.linConstraints,
+                                                                                                      reactions, nCols))
         except ValueError:
             # If any linear constraint is contradictory, return empty solution
             return 0., []
@@ -308,7 +304,8 @@ class FbAnalyzer(object):
                 biomass_index = reactions[rea_name][0]
             except TypeError:
                 biomass_index = reactions[rea_name]
-            obj_func = lambda x : -biomass_per_flux(x, biomass_index)
+
+            def obj_func(x): return -biomass_per_flux(x, biomass_index)
 
             if numIter < 0:
                 numIter = FbaParam.DEFAULT_NUMITER
@@ -317,7 +314,7 @@ class FbAnalyzer(object):
                 ps = NonLinearProblem(Aeq, beq, Aineq, bineq, lb, ub,
                                       self.solver)
                 ps.setObjective(obj_func)
-                ps.setObjGrad(lambda x :
+                ps.setObjGrad(lambda x:
                               neg_grad_biomass_per_flux(x, biomass_index))
                 if fbaParams.nlc != []:
                     ps.setNonlinearConstraints(fbaParams.nlc)
@@ -326,19 +323,19 @@ class FbAnalyzer(object):
                 spIter.setRange(-1., 1.)
                 ps.setStartPointIterator(spIter)
 
-            except ValueError, strerror:
-                print strerror
+            except ValueError as strerror:
+                print(strerror)
                 exit()
 
         else:
             # Build linear objective function (given as coefficient vector)
             try:
                 objective = ParamParser.convertObjFuncToLinVec(objStr,
-                                                    reactions, nCols, maxmin)
-            except Exception, strerror:
+                                                               reactions, nCols, maxmin)
+            except Exception as strerror:
                 print ("Error while trying to build coefficient vector of "
                        "linear objective function:")
-                print strerror
+                print(strerror)
                 exit()
 
             if fbaParams.nlc == []:
@@ -349,8 +346,8 @@ class FbAnalyzer(object):
                           nCols == len(reactions) else self.solver)
                 try:
                     ps = LinearProblem(Aeq, beq, Aineq, bineq, lb, ub, solver)
-                except ValueError, strerror:
-                    print strerror
+                except ValueError as strerror:
+                    print(strerror)
                     exit()
                 #print "lb:", len(lb)
                 ps.setObjective(objective)
@@ -359,12 +356,12 @@ class FbAnalyzer(object):
                 try:
                     ps = NonLinearProblem(Aeq, beq, Aineq, bineq, lb, ub,
                                           self.solver)
-                except ValueError, strerror:
-                    print strerror
+                except ValueError as strerror:
+                    print(strerror)
                     exit()
 
-                ps.setObjective(lambda x : dot(x, objective))
-                ps.setObjGrad(lambda _ : array(objective))
+                ps.setObjective(lambda x: dot(x, objective))
+                ps.setObjGrad(lambda _: array(objective))
                 ps.setNonlinearConstraints(fbaParams.nlc)
                 ps.setNlcGrad(fbaParams.nlc_grad)
                 spIter = StartPointIterator(nCols, numIter)
@@ -372,19 +369,19 @@ class FbAnalyzer(object):
                 ps.setStartPointIterator(spIter)
 
         # Launch optimization problem solver
-
         try:
             obj_value, solution = ps.minimize()
-        except ValueError, strerror:
+            print(obj_value)
+        except ValueError as strerror:
             if self.solver == "default":
-                print "Default solver reported an error:"
+                print("Default solver reported an error:")
             else:
-                print "Solver %s reported an error:" % self.solver
-            print strerror
-            print "Consider trying a different solver."
+                print("Solver %s reported an error:" % self.solver)
+            print(strerror)
+            print("Consider trying a different solver.")
             exit()
-        except KeyError, strerror:
-            print strerror
+        except KeyError as strerror:
+            print(strerror)
             exit()
 
         obj_value *= maxmin_factor
@@ -393,9 +390,8 @@ class FbAnalyzer(object):
 
         return obj_value, solution
 
-
     def runWithTotalFluxMinimization(self, reactions, matrix, lb, ub, fbaParams,
-        start_value_total=None, tolerance_total=EPSILON, tolerance_obj=EPSILON):
+                                     start_value_total=None, tolerance_total=EPSILON, tolerance_obj=EPSILON):
         """ perform FBA with LP iteratively to find a flux distribution with
             optimal value of objective function value and minimum total flux
 
@@ -441,8 +437,8 @@ class FbAnalyzer(object):
         # Get additional linear equality and inequality constraints
         try:
             Aeq, beq, Aineq, bineq = self.makeConstraintMatrices(matrix,
-                *ParamParser.linConstraintsToVectors(fbaParams.linConstraints,
-                                                     reactions, nCols))
+                                                                 *ParamParser.linConstraintsToVectors(fbaParams.linConstraints,
+                                                                                                      reactions, nCols))
         except ValueError:
             # If any linear constraint is contradictory, return empty solution
             return 0., []
@@ -460,10 +456,10 @@ class FbAnalyzer(object):
         try:
             objective = ParamParser.convertObjFuncToLinVec(objStr, reactions,
                                                            nCols, maxmin)
-        except Exception, strerror:
+        except Exception as strerror:
             print ("Error while trying to build coefficient vector of "
                    "linear objective function:")
-            print strerror
+            print(strerror)
             exit()
 
         if start_value_total is None or start_value_total < 0.:
@@ -476,36 +472,31 @@ class FbAnalyzer(object):
 
         # Use GLPK through OpenOpt
         solver = (_OOGLPK if (self.solver.lower() == _GLPK or
-                             self.solver.lower() == "default") else self.solver)
+                              self.solver.lower() == "default") else self.solver)
         try:
             ps = LinearProblem(Aeq, beq, Aineq, bineq+[m], lb, ub, solver)
-#            ps = LinearProblem(Aeq, beq, lb=lb, ub=ub, solver=solver)
-        except ValueError, strerror:
-            print strerror
+        except ValueError as strerror:
+            print(strerror)
             exit()
         ps.setObjective(objective)
 
-#        ps.setInequalityConstraints(Aineq, bineq+[m])
-
         try:
             m_value = ps.minimize()[0]
-        except ValueError, strerror:
+        except ValueError as strerror:
             if self.solver == "default":
-                print "Default solver reported an error:"
+                print("Default solver reported an error:")
             else:
-                print "Solver %s reported an error:" % self.solver
-            print strerror
-            print "Consider trying a different solver."
+                print("Solver %s reported an error:" % self.solver)
+            print(strerror)
+            print("Consider trying a different solver.")
             exit()
-        except KeyError, strerror:
-            print strerror
+        except KeyError as strerror:
+            print(strerror)
             exit()
 
-#        ps.setInequalityConstraints(Aineq, bineq+[l])
         ps.bineq[-1] = l
         l_value, l_flux = ps.minimize()
         #print "l_flux", l_flux
-#        ps.setInequalityConstraints(Aineq, bineq+[r])
         ps.bineq[-1] = r
         r_value = ps.minimize()[0]
 
@@ -516,18 +507,16 @@ class FbAnalyzer(object):
         # 1. Find right border so that f(m) = f(r)
         while abs(m_value-r_value) >= tolerance_obj:
             r *= 10.
-#            ps.setInequalityConstraints(Aineq, bineq+[r])
             ps.bineq[-1] = r
             r_value = ps.minimize()[0]
             m = (l+r)/2.
-#            ps.setInequalityConstraints(Aineq, bineq+[m])
             ps.bineq[-1] = m
             m_value = ps.minimize()[0]
             nSteps += 2
             print ("Step %u: l=%.10g (%.10g), r=%.10g (%.10g), m=%.10g (%.10g)"
                    % (nSteps, l, l_value, r, r_value, m, m_value))
-        print "Right border found."
-        print "abs(m_value-r_value):", abs(m_value-r_value)
+        print("Right border found.")
+        print("abs(m_value-r_value):", abs(m_value-r_value))
 
         # 2. Find left border so that f(l) > f(m)
         l_changed = False
@@ -539,21 +528,19 @@ class FbAnalyzer(object):
                 l = (l+m)/2.
             else:
                 l /= 2.
-#            ps.setInequalityConstraints(Aineq, bineq+[l])
             ps.bineq[-1] = l
             l_value, l_flux = ps.minimize()
             nSteps += 1
 
         if l_changed:
             m = (l+r)/2.
-#            ps.setInequalityConstraints(Aineq, bineq+[m])
             ps.bineq[-1] = m
             m_value = ps.minimize()[0]
             nSteps += 1
             print ("Step %u: l=%.10g (%.10g), r=%.10g (%.10g), m=%.10g (%.10g)"
                    % (nSteps, l, l_value, r, r_value, m, m_value))
-        print "Left border found."
-        print "abs(m_value-l_value):", abs(m_value-l_value)
+        print("Left border found.")
+        print("abs(m_value-l_value):", abs(m_value-l_value))
 
         while (abs(r-l) >= tolerance_total and
                abs(l_value-r_value) >= tolerance_obj):
@@ -565,7 +552,6 @@ class FbAnalyzer(object):
                 l, l_value = m, m_value
 
             m = (l+r)/2.
-#            ps.setInequalityConstraints(Aineq, bineq+[m])
             ps.bineq[-1] = m
             m_value, solution = ps.minimize()
             nSteps += 1
@@ -575,7 +561,6 @@ class FbAnalyzer(object):
 
         if r_value < m_value:
             m = r
-#            ps.setInequalityConstraints(Aineq, bineq+[m])
             ps.bineq[-1] = m
             m_value, solution = ps.minimize()
             nSteps += 1
@@ -583,7 +568,6 @@ class FbAnalyzer(object):
                    % (nSteps, l, l_value, r, r_value, m, m_value))
 
         return m, m_value * maxmin_factor, solution, nSteps
-
 
     def runOnModel(self, model, fbaParams, splitFluxes=True,
                    minimizeTotalFlux=False, rmDeadEnds=True):
@@ -595,8 +579,7 @@ class FbAnalyzer(object):
         fbaParams   -- optimization parameters (incl. objective function)
         splitFluxes -- if True, run split fluxes (resulting in non-negative flux
                        variables) before analysis
-        minimizeTotalFlux
-                    -- if True, find a solution with minimal total absolute flux
+        minimizeTotalFlux -- if True, find a solution with minimal total absolute flux
         rmDeadEnds   -- if True, remove all reactions with dead ends before
                         analysis (faster and gives an optimal solution, as well)
 
@@ -640,11 +623,12 @@ class FbAnalyzer(object):
             try:
                 ParamParser.convertObjFuncToLinVec(objStr, reactionsSplit,
                                                    len(lbSplit), maxmin)
-            except KeyError, s:
+            except KeyError as s:
                 if deadReactions:
-                    print ("Error while trying to construct the objective "
-                           "function vector:\n%s\nThis may be due to removal "
-                           "of nonfunctional reactions." % s)
+                    if self.verb:
+                        print ("Error while trying to construct the objective "
+                               "function vector:\n%s\nThis may be due to removal "
+                               "of nonfunctional reactions." % s)
                     return 0., MetabolicFlux(), dimReduced
 
             obj_value, solutionSplit = self.run(reactionsSplit, matrixSplit,
@@ -658,18 +642,19 @@ class FbAnalyzer(object):
                         # Optimize solution by limiting total flux
                         limit, obj_value, solutionSplit, nSteps = \
                             self.runWithTotalFluxMinimization(reactionsSplit,
-                                matrixSplit, lbSplit, ubSplit, fbaParams,
-                                sum(solutionSplit), 1e-8, 1e-12)
+                                                              matrixSplit, lbSplit, ubSplit, fbaParams,
+                                                              sum(solutionSplit), 1e-8, 1e-12)
                         print ("Found optimal flux limit of %.10g in %u steps."
                                % (limit, nSteps))
 
                     solution = array(FbAnalyzer.rejoinFluxes(solutionSplit,
-                                                    reactionsSplit, reactions))
-            except NameError, strerror:
-                print strerror
+                                                             reactionsSplit, reactions))
+            except NameError as strerror:
+                print(strerror)
 
         else:
-            obj_value, solution = self.run(reactions, matrix, lb, ub, fbaParams)
+            obj_value, solution = self.run(
+                reactions, matrix, lb, ub, fbaParams)
         flux = MetabolicFlux(modelRed, solution)
 
         # Add removed reactions with flux 0. and original bounds to solution
@@ -717,15 +702,15 @@ def main():
     model = MetabolicModel()
     try:
         model.addReactionsFromFile(options.reactionFile, rparser)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(options.reactionFile))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("Error in reaction file %s:" %
                os.path.basename(options.reactionFile))
-        print strerror
+        print(strerror)
         exit()
 
     # 3. Parse scenario file
@@ -734,24 +719,24 @@ def main():
     pparser = ParamParser()
     try:
         # Parse file, get maxmin, name of objective function, and solver name
-        maxmin, objStr, solver, numIter, lb , ub = pparser.parse(
-                                                              options.paramFile)
+        maxmin, objStr, solver, numIter, lb, ub = pparser.parse(
+            options.paramFile)
         fbaParams = FbaParam(solver, maxmin, objStr, numIter)
         fbaParams.setLinConstraints(pparser.lin_constraints)
         # Set flux bounds in model
         model.setFiniteBounds(lb, ub, True, model_messages)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(options.paramFile))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("Error in scenario file %s:" %
                os.path.basename(options.paramFile))
-        print strerror
+        print(strerror)
         exit()
-    except ValueError, strerror:
-        print strerror
+    except ValueError as strerror:
+        print(strerror)
         exit()
 
     # 4. Perform flux balance analysis on the metabolic network
@@ -760,31 +745,30 @@ def main():
         solver = "default"
     fba = FbAnalyzer(solver)
     obj_value, solution, ndim = fba.runOnModel(model, fbaParams, True,
-        options.minimizeFlux, not options.useFullMatrix)
+                                               options.minimizeFlux, not options.useFullMatrix)
 
     # Show warning and info messages of parsers
     msgs = (rparser.getMessages() + pparser.getMessages() +
             [x[1] for x in model_messages])
     if msgs:
-        print '\n'+'\n'.join(msgs)
+        print('\n'+'\n'.join(msgs))
     print ("Info: The reduced network has %u reactions and %u metabolites." %
            ndim[1::-1])
 
     # 5. Write output to file
-
     if len(solution) != 0:
-        print "\nValue of objective function at solution:", obj_value
-        print "Total absolute flux:",
-        print abs(array(solution.fluxDict.values())).sum()
+        print("\nValue of objective function at solution:", obj_value)
+        print("Total absolute flux:", end=' ')
+        print(abs(array(list(solution.fluxDict.values()))).sum())
         try:
             solution.writeToFile(options.outputFile)
-        except IOError, strerror:
+        except IOError as strerror:
             print ("Unable to write to file %s:" %
                    os.path.basename(options.outputFile))
-            print strerror
+            print(strerror)
             exit()
     else:
-        print "No output written."
+        print("No output written.")
         exit()
 
 

@@ -1,11 +1,11 @@
-""" 
+"""
 This file defines a set of functions and classes for cycle analysis
 according to
 [1] RR Vallabhajosyula, V Chickarmane, HM Sauro: Conservation analysis of
     large biochemical networks. Bioinformatics 22(3): 346-353 (2006)
-    
+
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -23,17 +23,24 @@ You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 
 """
+from __future__ import absolute_import
 
-from defines import roundAndCut, makeCoefNameTerm, displayPermutedMatrix
+from builtins import range
+from builtins import object
+from metano.defines import roundAndCut, makeCoefNameTerm, displayPermutedMatrix
 from numpy import array, zeros, empty, eye, nonzero, vectorize
 try:
-    import pygsl, pygsl.permutation, pygsl.linalg
+    import pygsl
+    import pygsl.permutation
+    import pygsl.linalg
     _pygsl_avail = True
 except ImportError:
     _pygsl_avail = False
 
 
-_myround = lambda x : roundAndCut(x, 8)
+def _myround(x): return roundAndCut(x, 8)
+
+
 _vmyround = vectorize(_myround)
 
 
@@ -58,7 +65,6 @@ class FluxCycle(object):
         self.lhs = lhs
         self.rhs = rhs
         self.indices = indices
-
 
     def display(self, reactionNames):
         """ return a list of lines for displaying the linear system of equations
@@ -86,7 +92,8 @@ class FluxCycle(object):
                 if self.rhs[i] == "":
                     lines[i] = lines[i].ljust(maxlen) + " = 0"
                 else:
-                    lines[i] = "%s = %s" % (lines[i].ljust(maxlen), self.rhs[i])
+                    lines[i] = "%s = %s" % (
+                        lines[i].ljust(maxlen), self.rhs[i])
         else:
             for i in range(nRows):
                 lines[i] = "%s = %g" % (lines[i].ljust(maxlen), self.rhs[i])
@@ -94,7 +101,7 @@ class FluxCycle(object):
         return lines
 
 
-def gaussJordan(M, epsilon = 1E-8):
+def gaussJordan(M, epsilon=1E-8):
     """ transform the given matrix to reduced row-echelon form using Gauss-
         Jordan elimination and read off the rank of M. The operation is
         performed in place, i.e. M is overwritten with the result.
@@ -139,7 +146,7 @@ def gaussJordan(M, epsilon = 1E-8):
     return rank
 
 
-def ref2rref(M, epsilon = 1E-8):
+def ref2rref(M, epsilon=1E-8):
     """ convert a matrix M that is already in row-echelon form to reduced
         row-echelon form and read off the rank of M. The operation is performed
         in place, i.e. M is overwritten with the result.
@@ -187,8 +194,8 @@ def qrpt_decomp2(A):
     m, n = A.shape
     dtype = A.dtype
     q = zeros((m, m), dtype)
-    r = zeros((m,n), dtype)
-    tau = pygsl.permutation.Permutation(min(m,n))
+    r = zeros((m, n), dtype)
+    tau = pygsl.permutation.Permutation(min(m, n))
     p = pygsl.permutation.Permutation(n)
     sig = pygsl.permutation.Permutation(n)
 
@@ -223,7 +230,6 @@ class CycleAnalyzer(object):
         self.r = None
         self.rIndices = []
 
-
     @staticmethod
     def computeGamma(S):
         """ perform cycle analysis on matrix S via QR decomposition with column
@@ -238,7 +244,6 @@ class CycleAnalyzer(object):
         g[:, rank:] = eye(nRowsG)
         return p, r, g
 
-
     def getDependent(self):
         """ return list of indices of dependent reactions
         """
@@ -247,14 +252,12 @@ class CycleAnalyzer(object):
 
         return self.gIndices[-len(self.gamma):]
 
-
     def displayGamma(self, reactionNames):
         """ return a list of lines for displaying gamma as linear combinations
         """
         if self.gamma is None:
             return []
         return displayPermutedMatrix(self.gamma, self.gIndices, reactionNames)
-
 
     def computeCycles(self, model, internalOnly=True):
         """ perform cycle analysis on the given MetabolicModel
@@ -283,7 +286,7 @@ class CycleAnalyzer(object):
             # Replace indices in submodel with original indices
             for i in range(nColsG):
                 self.gIndices[i] = model.reactionDict[submodel.reactions[
-                                                        self.gIndices[i]].name]
+                    self.gIndices[i]].name]
 
         # Round Gamma matrix to 8 digits and truncate near-zero values
         self.gamma = _vmyround(self.gamma)
@@ -332,7 +335,6 @@ class CycleAnalyzer(object):
         # Also round r matrix to 8 digits and truncate near-zero values
         self.r = _vmyround(self.r)
 
-
     def getCycleDescriptions(self, solution, sIndices=None):
         """ generate descriptions of each cycle from Gamma and R, depending on
             the flux distribution given in solution
@@ -354,7 +356,7 @@ class CycleAnalyzer(object):
             return []
 
         if sIndices == None:
-            sIndices = range(len(solution))
+            sIndices = list(range(len(solution)))
 
         dependent = set(self.getDependent())
         dtype = self.r.dtype
@@ -397,8 +399,8 @@ class CycleAnalyzer(object):
 #            print " indices", cycle.indices
 #            print " processing R"
             for rowR in self.r:
-#                k += 1
-#                print " row %u" % k
+                #                k += 1
+                #                print " row %u" % k
 
                 # Only look at non-zero entries of rowR
                 nzR = nonzero(rowR)[0]
@@ -409,7 +411,7 @@ class CycleAnalyzer(object):
                 #         (i.e. those with all zeros in all selected columns)
                 #  and b) rows of R pertaining to more than one cycle
                 if (len(setCycIndices & setRIndicRed) == 0 or
-                    len((setRIndicRed | setCycIndices) & dependent) > 1):
+                        len((setRIndicRed | setCycIndices) & dependent) > 1):
                     continue
 
 #                print rowR
@@ -430,7 +432,7 @@ class CycleAnalyzer(object):
                     for j in rIndicRed:
                         if j not in allCycleReacs:
                             cycle.rhs[i] += makeCoefNameTerm(cycle.rhs[i],
-                                -rowR[rIndicesRev[j]], solution[sIndicesRev[j]])
+                                                             -rowR[rIndicesRev[j]], solution[sIndicesRev[j]])
                 else:
                     for j in rIndicRed:
                         if j not in allCycleReacs:

@@ -7,7 +7,7 @@ method, which exports the stoichiometric matrix as a .m file.
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -24,10 +24,12 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
 from fba import OptionParser
-from metabolicmodel import MetabolicModel
-from defines import exportMatrixAsDotM, COPYRIGHT_VERSION_STRING
+from metano.metabolicmodel import MetabolicModel
+from metano.defines import exportMatrixAsDotM, COPYRIGHT_VERSION_STRING
 import os
 
 
@@ -52,25 +54,25 @@ def main():
     model = MetabolicModel()
     try:
         model.addReactionsFromFile(options.reactionFile)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(options.reactionFile))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("Error in reaction file %s:" %
                os.path.basename(options.reactionFile))
-        print strerror
+        print(strerror)
         exit()
 
     # Export matrix
 
     try:
         exportMatrixAsDotM(model.getStoichiometricMatrix(), options.outputFile)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to write file %s:" %
                os.path.basename(options.outputFile))
-        print strerror
+        print(strerror)
         exit()
 
 

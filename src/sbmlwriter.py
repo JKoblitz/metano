@@ -6,7 +6,7 @@ Constraints extension: http://sbml.org/Documents/Specifications/SBML_Level_3/Pac
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -25,18 +25,26 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
-from defines import Verbosity, COPYRIGHT_VERSION_STRING
-from sbmlstructure import SbmlDef
-from fba import OptionParser
-from reactionparser import ReactionParser
-from paramparser import ParamParser
-from metabolicmodel import Reactant, MetabolicModel
-from metabolicflux import MetabolicFlux
+from builtins import str
+from builtins import zip
+from builtins import range
+from builtins import object
+from metano.defines import Verbosity, COPYRIGHT_VERSION_STRING
+from metano.sbmlstructure import SbmlDef
+from metano.fba import OptionParser
+from metano.reactionparser import ReactionParser
+from metano.paramparser import ParamParser
+from metano.metabolicmodel import Reactant, MetabolicModel
+from metano.metabolicflux import MetabolicFlux
 from numpy import inf
 from copy import deepcopy
 import xml.dom.minidom as dom
-import os, re
+import os
+import re
+
 
 class SbmlExportStruc(object):
     SBML_URL = "http://www.sbml.org/sbml/level3/version1/core"
@@ -50,20 +58,24 @@ class SbmlExportStruc(object):
     DEFAULT_BOUNDARY_SUFFIX = "_b"
     THE_FLUX_UNIT = "mmol_per_gDW_per_hr"
     UNITS = ({SbmlDef.KIND: "mole",   SbmlDef.EXPONENT: "1",  SbmlDef.SCALE: "-3", SbmlDef.MULTIPLIER: "1"},
-             {SbmlDef.KIND: "gram",   SbmlDef.EXPONENT: "-1", SbmlDef.SCALE: "1",  SbmlDef.MULTIPLIER: "1"},
+             {SbmlDef.KIND: "gram",   SbmlDef.EXPONENT: "-1",
+                 SbmlDef.SCALE: "1",  SbmlDef.MULTIPLIER: "1"},
              {SbmlDef.KIND: "second", SbmlDef.EXPONENT: "-1", SbmlDef.SCALE: "1",  SbmlDef.MULTIPLIER: "0.00027777"})
+
 
 validIdCharactersPattern = re.compile("[\W_]+")
 
+
 def removeInvalidIdCharacters(s):
-    
+
     # remove all special chracters
     s = validIdCharactersPattern.sub("_", s)
-    
+
     # append '_' to front if ID starts with a number
     s = s if s[0].isalpha() or s[0] == "_" else "_%s" % s
-    
+
     return s
+
 
 class SbmlWriter(object):
     """ Class for an SBML writer
@@ -122,12 +134,12 @@ class SbmlWriter(object):
             # maxmin is inverted because in our SBML files (unlike in LP),
             # maximization is the default (i.e. factor 1 instead of -1)
             self.objCoef = ParamParser.convertObjFuncToLinVec(objStr,
-                                          model.reactionDict, maxmin=not maxmin)
+                                                              model.reactionDict, maxmin=not maxmin)
         except ValueError:
             msg = ("Info: Objective function (%s) is not a linear expression. "
                    "%s will not be written." % (objStr, SbmlDef.P_OBJ_COEF))
             self.messages.append((Verbosity.INFO, msg))
-        except KeyError, strerror:
+        except KeyError as strerror:
             msg = ("Warning: An error occurred in evaluating the objective "
                    "function:\n %s." % strerror)
             self.messages.append((Verbosity.WARNING, msg))
@@ -138,7 +150,6 @@ class SbmlWriter(object):
         if infinityVal and infinityVal < 0.:
             infinityVal = -1.*infinityVal
         self.infinityVal = infinityVal
-
 
     def clear(self):
         """ clear all internal variables, warnings and info messages
@@ -163,9 +174,8 @@ class SbmlWriter(object):
         """
         return [x[1] for x in self.messages if x[0] <= level]
 
-
     def makeCompartments(self, compartmentRegex="",
-                        defaultCompartment=SbmlExportStruc.DEFAULT_COMPARTMENT):
+                         defaultCompartment=SbmlExportStruc.DEFAULT_COMPARTMENT):
         """ construct compartment IDs and metabolite->compartment mapping from
             self.metabolites
 
@@ -196,7 +206,7 @@ class SbmlWriter(object):
 
         try:
             pattern = re.compile(compartmentRegex)
-        except re.error, strerror:
+        except re.error as strerror:
             msg = ("Error in regular expression: %s." %
                    strerror)
             self.messages.append((Verbosity.ERROR, msg))
@@ -234,7 +244,6 @@ class SbmlWriter(object):
 
         return True
 
-
     def addBoundaryMetabolites(self,
                                suffix=SbmlExportStruc.DEFAULT_BOUNDARY_SUFFIX):
         """ add boundary metabolites to all reactions that have an empty left-
@@ -268,8 +277,8 @@ class SbmlWriter(object):
                 del self.reactions[i]
                 del self.reactionLabels[i]
                 # Rebuild index
-                self.reactionIndex = dict(zip([r.name for r in self.reactions],
-                                              range(len(self.reactions))))
+                self.reactionIndex = dict(list(zip([r.name for r in self.reactions],
+                                                   list(range(len(self.reactions))))))
                 msg = ("Warning: Reaction '%s' has neither reactants "
                        "nor products. Deleted." % reaction.name)
                 self.messages.append((Verbosity.WARNING, msg))
@@ -288,7 +297,6 @@ class SbmlWriter(object):
                                                    suffix)
         return True
 
-
     def _addBoundaryCompartment(self):
         """ add "Boundary" compartment to list of compartments (if not already
             present)
@@ -298,7 +306,6 @@ class SbmlWriter(object):
         if SbmlExportStruc.BOUNDARY_COMPARTMENT not in self.compartments:
             self.compartments.append(SbmlExportStruc.BOUNDARY_COMPARTMENT)
         return True
-
 
     def _addBoundaryMetabolitesToSide(self, reaction, side, reactants, suffix):
         """ add boundary metabolites to the specified side of the given reaction
@@ -317,7 +324,7 @@ class SbmlWriter(object):
             if boundaryName not in self.metaboliteCompartment:
                 self.metabolites.append(boundaryName)
                 self.metaboliteCompartment[boundaryName] = \
-                                    SbmlExportStruc.BOUNDARY_COMPARTMENT
+                    SbmlExportStruc.BOUNDARY_COMPARTMENT
                 self.isBoundary[boundaryName] = True
                 orig_index = self.metaboliteIndex[reactant.name]
                 boundaryLabel = (self.metaboliteLabels[orig_index] + suffix)
@@ -330,7 +337,6 @@ class SbmlWriter(object):
                    % (boundaryName, abs(reactant.coef), side, reaction.name))
             self.messages.append((Verbosity.DEBUG, msg))
 
-
     def writeFile(self, sbmlFileName):
         """ write prepared structures to file designated by sbmlFileName
         """
@@ -340,16 +346,19 @@ class SbmlWriter(object):
         sbml.setAttribute(SbmlDef.LEVEL, "3")
         sbml.setAttribute(SbmlDef.VERSION, "1")
         sbml.setAttribute(SbmlDef.XMLNS, SbmlExportStruc.SBML_URL)
-        sbml.setAttribute(SbmlExportStruc.XMLNS_HTML, SbmlExportStruc.XHTML_URL)
+        sbml.setAttribute(SbmlExportStruc.XMLNS_HTML,
+                          SbmlExportStruc.XHTML_URL)
 
         model = dom.Element(SbmlDef.MODEL)
-        model.setAttribute(SbmlDef.ID, removeInvalidIdCharacters(self.modelName))
+        model.setAttribute(
+            SbmlDef.ID, removeInvalidIdCharacters(self.modelName))
         model.setAttribute(SbmlDef.NAME, self.modelName)
 
         # Write unit definition
         listOfUnitDefinitions = dom.Element(SbmlDef.LISTOFUNITDEFINITIONS)
         unitDefinition = dom.Element(SbmlDef.UNITDEFINITION)
-        unitDefinition.setAttribute(SbmlDef.ID, removeInvalidIdCharacters(SbmlExportStruc.THE_FLUX_UNIT))
+        unitDefinition.setAttribute(
+            SbmlDef.ID, removeInvalidIdCharacters(SbmlExportStruc.THE_FLUX_UNIT))
         listOfUnits = dom.Element(SbmlDef.LISTOFUNITS)
         for u in SbmlExportStruc.UNITS:
             unit = dom.Element(SbmlDef.UNIT)
@@ -364,7 +373,8 @@ class SbmlWriter(object):
         listOfCompartments = dom.Element(SbmlDef.LISTOFCOMPARTMENTS)
         for compartment in self.compartments:
             element = dom.Element(SbmlDef.COMPARTMENT)
-            element.setAttribute(SbmlDef.ID, removeInvalidIdCharacters(compartment))
+            element.setAttribute(
+                SbmlDef.ID, removeInvalidIdCharacters(compartment))
             element.setAttribute(SbmlDef.CONSTANT, "true")
             listOfCompartments.appendChild(element)
         model.appendChild(listOfCompartments)
@@ -377,7 +387,8 @@ class SbmlWriter(object):
             metaboliteCompartment = self.metaboliteCompartment[metabolite]
             boundaryCondition = self._encodeBool[self.isBoundary[metabolite]]
             species = dom.Element(SbmlDef.SPECIES)
-            species.setAttribute(SbmlDef.ID, removeInvalidIdCharacters(metabolite))
+            species.setAttribute(
+                SbmlDef.ID, removeInvalidIdCharacters(metabolite))
             species.setAttribute(SbmlDef.NAME, metaboliteLabel)
             species.setAttribute(SbmlDef.COMPARTMENT, metaboliteCompartment)
             species.setAttribute(SbmlDef.BOUNDARYCONDITION, boundaryCondition)
@@ -389,8 +400,8 @@ class SbmlWriter(object):
             if metaboliteLabel and metaboliteLabel != metabolite:
                 msg += "(%s) " % metaboliteLabel
             msg += ("with %s='%s' and %s='%s'." % (SbmlDef.COMPARTMENT,
-                    metaboliteCompartment, SbmlDef.BOUNDARYCONDITION,
-                    boundaryCondition))
+                                                   metaboliteCompartment, SbmlDef.BOUNDARYCONDITION,
+                                                   boundaryCondition))
             self.messages.append((Verbosity.DEBUG, msg))
 
         model.appendChild(listOfSpecies)
@@ -403,9 +414,8 @@ class SbmlWriter(object):
         sbmlTree.appendChild(sbml)
 
         # Write tree to file
-        with open (sbmlFileName, 'w') as f:
+        with open(sbmlFileName, 'w') as f:
             sbmlTree.writexml(f, "", '\t', '\n', SbmlExportStruc.ENCODING)
-
 
     def _createListOfReactions(self):
         listOfReactions = dom.Element(SbmlDef.LISTOFREACTIONS)
@@ -425,7 +435,8 @@ class SbmlWriter(object):
             reactionLabel = self.reactionLabels[i]
             reversible = self._encodeBool[rea_item.direction == 0]
             reaction = dom.Element(SbmlDef.REACTION)
-            reaction.setAttribute(SbmlDef.ID, removeInvalidIdCharacters(reactionName))
+            reaction.setAttribute(
+                SbmlDef.ID, removeInvalidIdCharacters(reactionName))
             reaction.setAttribute(SbmlDef.NAME, reactionLabel)
             reaction.setAttribute(SbmlDef.REVERSIBLE, reversible)
             reaction.setAttribute(SbmlDef.FAST, "false")
@@ -466,11 +477,11 @@ class SbmlWriter(object):
             # Create list of reactants and list of products
             if educts:
                 listOfReactants = self._createListOfReactantsProducts(
-                                                    SbmlDef.LISTOFREACTANTS, educts)
+                    SbmlDef.LISTOFREACTANTS, educts)
                 reaction.appendChild(listOfReactants)
             if products:
                 listOfProducts = self._createListOfReactantsProducts(
-                                                   SbmlDef.LISTOFPRODUCTS, products)
+                    SbmlDef.LISTOFPRODUCTS, products)
                 reaction.appendChild(listOfProducts)
 
             # Create kineticLaw for reaction
@@ -478,13 +489,13 @@ class SbmlWriter(object):
 
             math = dom.Element(SbmlDef.MATH)
             math.setAttribute(SbmlDef.XMLNS, SbmlExportStruc.MATH_URL)
-            #===================================================================
+            # ===================================================================
             # ci = dom.Element(SbmlDef.CI)
             # t = dom.Text()
             # t.data = "%s" % SbmlDef.P_FLUX_VALUE
             # ci.appendChild(t)
             # math.appendChild(ci)
-            #===================================================================
+            # ===================================================================
             cn = dom.Element(SbmlDef.CN)
             t = dom.Text()
 
@@ -501,8 +512,9 @@ class SbmlWriter(object):
                     lb = -1*self.infinityVal
 
                 parameter = dom.Element(SbmlDef.PARAMETER)
-                parameter.setAttribute(SbmlDef.ID, removeInvalidIdCharacters(SbmlDef.P_LOWER_BOUND))
-                parameter.setAttribute(SbmlDef.CONSTANT, "true")
+                parameter.setAttribute(
+                    SbmlDef.ID, removeInvalidIdCharacters(SbmlDef.P_LOWER_BOUND))
+                # parameter.setAttribute(SbmlDef.CONSTANT, "true") # Change in SBML V3
                 value = repr(lb)
                 parameter.setAttribute(SbmlDef.VALUE, value)
                 parameter.setAttribute(SbmlDef.UNITS,
@@ -520,8 +532,9 @@ class SbmlWriter(object):
                     ub = self.infinityVal
 
                 parameter = dom.Element(SbmlDef.PARAMETER)
-                parameter.setAttribute(SbmlDef.ID, removeInvalidIdCharacters(SbmlDef.P_UPPER_BOUND))
-                parameter.setAttribute(SbmlDef.CONSTANT, "true")
+                parameter.setAttribute(
+                    SbmlDef.ID, removeInvalidIdCharacters(SbmlDef.P_UPPER_BOUND))
+                # parameter.setAttribute(SbmlDef.CONSTANT, "true") # Change in SBML V3
                 value = repr(ub)
                 parameter.setAttribute(SbmlDef.VALUE, value)
                 parameter.setAttribute(SbmlDef.UNITS,
@@ -534,8 +547,9 @@ class SbmlWriter(object):
             if self.objCoef:
                 coef = self.objCoef[i]
                 parameter = dom.Element(SbmlDef.PARAMETER)
-                parameter.setAttribute(SbmlDef.ID, removeInvalidIdCharacters(SbmlDef.P_OBJ_COEF))
-                parameter.setAttribute(SbmlDef.CONSTANT, "true")
+                parameter.setAttribute(
+                    SbmlDef.ID, removeInvalidIdCharacters(SbmlDef.P_OBJ_COEF))
+                # parameter.setAttribute(SbmlDef.CONSTANT, "true") # Change in SBML V3
                 value = repr(coef)
                 parameter.setAttribute(SbmlDef.VALUE, value)
                 listOfParameters.appendChild(parameter)
@@ -543,8 +557,9 @@ class SbmlWriter(object):
 
             if tmp_flux is not None:
                 parameter = dom.Element(SbmlDef.PARAMETER)
-                parameter.setAttribute(SbmlDef.ID, removeInvalidIdCharacters(SbmlDef.P_FLUX_VALUE))
-                parameter.setAttribute(SbmlDef.CONSTANT, "true")
+                parameter.setAttribute(
+                    SbmlDef.ID, removeInvalidIdCharacters(SbmlDef.P_FLUX_VALUE))
+                # parameter.setAttribute(SbmlDef.CONSTANT, "true") # Change in SBML V3
                 value = repr(tmp_flux)
                 parameter.setAttribute(SbmlDef.VALUE, value)
                 parameter.setAttribute(SbmlDef.UNITS,
@@ -570,25 +585,25 @@ class SbmlWriter(object):
 
         return listOfReactions
 
-
     def _createListOfReactantsProducts(self, typ, reactants):
         """ create listOfReactants or listOfProducts node
-    
+
         Keyword arguments:
-    
+
         typ       -- SbmlDef.LISTOFREACTANTS or SbmlDef.LISTOFPRODUCTS
         reactants -- list of Reactant objects
-    
+
         Returns SBML node with the given type
         """
         listOfSpeciesRef = dom.Element(typ)
         for r in reactants:
             reactant = dom.Element(SbmlDef.SPECIESREFERENCE)
-            reactant.setAttribute(SbmlDef.SPECIES, removeInvalidIdCharacters(r.name))
+            reactant.setAttribute(
+                SbmlDef.SPECIES, removeInvalidIdCharacters(r.name))
             reactant.setAttribute(SbmlDef.CONSTANT, "false")
             reactant.setAttribute(SbmlDef.STOICHIOMETRY, repr(abs(r.coef)))
             listOfSpeciesRef.appendChild(reactant)
-    
+
         return listOfSpeciesRef
 
 
@@ -640,16 +655,16 @@ def main():
     parser.check_required("-p")
     parser.check_required("-o")
 
-    print "Start creating SBML file '%s'.." % options.outputFile
-    print "Reaction file:           '%s'" % options.reactionFile
-    print "Scenario file:           '%s'" % options.paramFile
+    print("Start creating SBML file '%s'.." % options.outputFile)
+    print("Reaction file:           '%s'" % options.reactionFile)
+    print("Scenario file:           '%s'" % options.paramFile)
     if options.fluxFile:
-        print "Flux file:               '%s'" % options.fluxFile
-    print "Compartment reg-ex:      '%s'" % options.compartmentRegex
-    print "Default compartment:     '%s'" % options.defaultCompartment
-    print "Infinity value:          %r" % options.infinityVal
+        print("Flux file:               '%s'" % options.fluxFile)
+    print("Compartment reg-ex:      '%s'" % options.compartmentRegex)
+    print("Default compartment:     '%s'" % options.defaultCompartment)
+    print("Infinity value:          %r" % options.infinityVal)
     if options.boundarySuffix:
-        print "Boundary suffix:         '%s'\n" % options.boundarySuffix
+        print("Boundary suffix:         '%s'\n" % options.boundarySuffix)
 
     # 2. Parse reaction file
 
@@ -657,15 +672,15 @@ def main():
     model = MetabolicModel()
     try:
         model.addReactionsFromFile(options.reactionFile, rparser)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(options.reactionFile))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("Error in reaction file %s:" %
                os.path.basename(options.reactionFile))
-        print strerror
+        print(strerror)
         exit()
 
     # 3. Parse scenario file
@@ -677,25 +692,25 @@ def main():
         maxmin, objStr, _, _, lb, ub = pparser.parse(options.paramFile)
         # Set flux bounds in model
         model.setFiniteBounds(lb, ub, True, model_messages)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(options.paramFile))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("Error in scenario file %s:" %
                os.path.basename(options.paramFile))
-        print strerror
+        print(strerror)
         exit()
-    except ValueError, strerror:
-        print strerror
+    except ValueError as strerror:
+        print(strerror)
         exit()
 
     # Show warning and info messages of parsers
     msgs = (rparser.getMessages() + pparser.getMessages() +
             [x[1] for x in model_messages])
     if msgs:
-        print '\n'.join(msgs)
+        print('\n'.join(msgs))
 
     # 4. Read flux distribution from file
 
@@ -703,17 +718,17 @@ def main():
     if options.fluxFile:
         try:
             fluxes.readFromFile(options.fluxFile)
-        except IOError, strerror:
+        except IOError as strerror:
             print ("An error occurred while trying to read file %s:" %
                    os.path.basename(options.fluxFile))
-            print strerror
-            print "Fluxes will not be written."
+            print(strerror)
+            print("Fluxes will not be written.")
             fluxes = MetabolicFlux()
-        except SyntaxError, strerror:
+        except SyntaxError as strerror:
             print ("An error occurred parsing file %s:" %
                    os.path.basename(options.fluxFile))
-            print strerror
-            print "Fluxes will not be written."
+            print(strerror)
+            print("Fluxes will not be written.")
             fluxes = MetabolicFlux()
 
     # 5. Write SBML file
@@ -740,9 +755,9 @@ def main():
         # Show only error, warning, and info messages
         msgs = sbmlWriter.getMessages()
     if msgs:
-        print '\n'+'\n'.join(msgs)
+        print('\n'+'\n'.join(msgs))
 
-    print "Finished."
+    print("Finished.")
 
 
 if __name__ == "__main__":

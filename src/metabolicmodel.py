@@ -4,7 +4,7 @@ metabolic model.
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -23,11 +23,19 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
-from defines import Verbosity, ReaFileStruc, typename, makeUnique
+from future import standard_library
+standard_library.install_aliases()
+from builtins import map
+from builtins import zip
+from builtins import range
+from builtins import object
+from metano.defines import Verbosity, ReaFileStruc, typename, makeUnique
 from numpy import inf, array, nonzero
-from StringIO import StringIO
-from reactionparser import ReactionParser
+from io import StringIO
+from metano.reactionparser import ReactionParser
 import re
 import codecs
 
@@ -103,8 +111,8 @@ class Reaction(object):
     # Mapping from arrow to corresponding direction enum value
     arrowToDirection = {ReaFileStruc.arrowRev: 0, ReaFileStruc.arrowIrr: 1,
                         ReaFileStruc.arrowFlip: -1}
-    directionToArrow = dict(zip(arrowToDirection.values(),
-                                arrowToDirection.keys()))
+    directionToArrow = dict(list(zip(list(arrowToDirection.values()),
+                                list(arrowToDirection.keys()))))
 
     def __init__(self, name="", educts=None, arrow=None, products=None,
                  comment="", educt_factor=-1., lb=-inf, ub=inf, **kwargs):
@@ -139,7 +147,7 @@ class Reaction(object):
                 # argument
             except KeyError:
                 raise ValueError("Illegal reaction arrow '%s'. Must be one of "
-                                 "%s" % (arrow, self.arrowToDirection.keys()))
+                                 "%s" % (arrow, list(self.arrowToDirection.keys())))
 
         self.metabolites = []
         self._metabDict = {}
@@ -224,18 +232,18 @@ class Reaction(object):
             objects; if withZero is True, include reactants with coefficient 0
         """
         if withZero:
-            return filter(lambda x : x.coef <= 0., self.metabolites)
+            return [x for x in self.metabolites if x.coef <= 0.]
         else:
-            return filter(lambda x : x.coef < 0., self.metabolites)
+            return [x for x in self.metabolites if x.coef < 0.]
 
     def getProducts(self, withZero=False):
         """ return the products (i.e. reactants with coefficient > 0);
             if withZero is True, include reactants with coefficient 0
         """
         if withZero:
-            return filter(lambda x : x.coef >= 0., self.metabolites)
+            return [x for x in self.metabolites if x.coef >= 0.]
         else:
-            return filter(lambda x : x.coef > 0., self.metabolites)
+            return [x for x in self.metabolites if x.coef > 0.]
 
     def setBounds(self, lb, ub):
         self.lb = lb
@@ -360,7 +368,7 @@ class Reaction(object):
 
     def __repr__(self):
         educts = [(-coef, name) for (coef, name) in self.getEducts(True)]
-        products = map(tuple, self.getProducts(False))
+        products = list(map(tuple, self.getProducts(False)))
         return ("Reaction(%r, %r, %r, %r, %r, %r, %r, %r)" %
                 (self.name, educts, self.directionToArrow[self.direction],
                  products, self.comment, -1., self._lb, self._ub))
@@ -439,14 +447,14 @@ class MetabolicModel(object):
             reanames = self.getReactionNames()
             if len(self.reactions) != len(set(reanames)):
                 raise ModelError("Reaction names are not unique")
-            self._reactionLabels = dict(zip(reanames,
-                makeUnique(self._getTranslatedReactionNames())))
+            self._reactionLabels = dict(list(zip(reanames,
+                makeUnique(self._getTranslatedReactionNames()))))
 
         if doMetaboliteLabels:
             # Metabolite names are unique by construction
 
-            self._metaboliteLabels = dict(zip(self.getMetaboliteNames(),
-                makeUnique(self._getTranslatedMetaboliteNames())))
+            self._metaboliteLabels = dict(list(zip(self.getMetaboliteNames(),
+                makeUnique(self._getTranslatedMetaboliteNames()))))
 
 
     def getBounds(self):
@@ -833,11 +841,11 @@ class MetabolicModel(object):
         # from string
         if self.useReactionLabels:
             # Create reverse mapping of labels to reaction names
-            revMap = dict(zip(self._reactionLabels.values(),
-                              self._reactionLabels.keys()))
+            revMap = dict(list(zip(list(self._reactionLabels.values()),
+                              list(self._reactionLabels.keys()))))
         else:
             rNames = self.getReactionNames()
-            revMap = dict(zip(rNames, rNames))
+            revMap = dict(list(zip(rNames, rNames)))
         for rea in m.reactions:
             original = self.reactions[self.reactionDict[revMap[rea.name]]]
             rea.setBounds(*original.getBounds())
@@ -908,9 +916,9 @@ class MetabolicModel(object):
 
         reactionLabels = self._getTranslatedReactionNames()
         maxlen = len(max(reactionLabels, key=len))
-        rlabels = dict(zip(self.getReactionNames(), reactionLabels))
-        mlabels = dict(zip(self.getMetaboliteNames(),
-                           self._getTranslatedMetaboliteNames()))
+        rlabels = dict(list(zip(self.getReactionNames(), reactionLabels)))
+        mlabels = dict(list(zip(self.getMetaboliteNames(),
+                           self._getTranslatedMetaboliteNames())))
 
         last_index = len(self.reactions)-1
         count = 0
@@ -991,7 +999,7 @@ class MetabolicModel(object):
             self.useReactionLabels = useReactionLabels
 
         reactionLabels = self._getTranslatedReactionNames()
-        rlabels = dict(zip(self.getReactionNames(), reactionLabels))
+        rlabels = dict(list(zip(self.getReactionNames(), reactionLabels)))
 
         for rea in self.reactions:
             lb, ub = rea.getBounds()
@@ -1045,9 +1053,9 @@ class MetabolicModel(object):
             return      # nothing to do
 
         # Replace parentheses with underscores in metabolite names
-        metabReplace = dict(zip(self.metabolites,
+        metabReplace = dict(list(zip(self.metabolites,
                                 [met.replace('(', '_').replace(')', '_')
-                                 for met in self.metabolites]))
+                                 for met in self.metabolites])))
 
         # Write E. coli compartment data (must be adapted manually)
         f.write(";ID;pH;IS;Potential mV;Volume;\n"
@@ -1202,8 +1210,8 @@ class MetabolicModel(object):
                 matrix[:,i] = matrix[:,i]*-1
 
         if verbose:
-            print "stoichiometric matrix and reaction names:"
-            print array(matrix), "\n", reactionNames
+            print("stoichiometric matrix and reaction names:")
+            print(array(matrix), "\n", reactionNames)
 
         # transpose matrix and create a list of lists
         matrix = [[matrix[j][i] for j in range(len(matrix))]
@@ -1215,9 +1223,9 @@ class MetabolicModel(object):
         matrix = sorted(matrix)
 
         if verbose:
-            print "transposed and sorted stoichiometric matrix, sorted "\
-                    "reaction names:"
-            print array(matrix), "\n", reactionNames
+            print("transposed and sorted stoichiometric matrix, sorted "\
+                    "reaction names:")
+            print(array(matrix), "\n", reactionNames)
 
         matrix = array(matrix)
 
@@ -1226,8 +1234,8 @@ class MetabolicModel(object):
                                 if sum(abs(matrix[i-1,:]-matrix[i,:]))<=epsilon]
 
         if verbose:
-            print "duplicate reactions:"
-            print duplicateReactions
+            print("duplicate reactions:")
+            print(duplicateReactions)
 
         return duplicateReactions
 
@@ -1309,16 +1317,16 @@ class MetabolicModel(object):
             if nDeadReactions:
                 print ("%u reactions have a flux that is restricted to zero:" %
                        nDeadReactions)
-                print "\n".join(sorted(self.reactions[i].name for i in
-                                       allDeadReactions))
+                print("\n".join(sorted(self.reactions[i].name for i in
+                                       allDeadReactions)))
             else:
-                print "There are no reactions with a flux restricted to zero."
-            print
-            print "Producing and consuming reactions for all metabolites:"
+                print("There are no reactions with a flux restricted to zero.")
+            print()
+            print("Producing and consuming reactions for all metabolites:")
             for i in range(nMetabolites):
                 print ("%s (%u, %u)" % (self.metabolites[i],
                        len(producingReactions[i]), len(consumingReactions[i])))
-            print
+            print()
 
         # Total reactions is the combined set of consuming and producing
         # reactions
@@ -1369,8 +1377,8 @@ class MetabolicModel(object):
 
             for j in deadReactions:
                 if verbose:
-                    print ("Fixing reaction %s (metabolites:" %
-                           self.reactions[j].name),
+                    print(("Fixing reaction %s (metabolites:" %
+                           self.reactions[j].name), end=' ')
 
                 # Remove dead reaction from sets of producing, consuming, and
                 # total reactions of every involved metabolite
@@ -1384,8 +1392,8 @@ class MetabolicModel(object):
                 allDeadReactions.add(j)
 
                 if verbose:
-                    print "%s)" % ", ".join([self.metabolites[i] for i in
-                                metabolitesByReaction[j] if not isDeadEnd[i]])
+                    print("%s)" % ", ".join([self.metabolites[i] for i in
+                                metabolitesByReaction[j] if not isDeadEnd[i]]))
 
         # Replace indices with names
         deadEnds = [self.metabolites[i] for i in range(nMetabolites)
@@ -1393,14 +1401,14 @@ class MetabolicModel(object):
         deadReactions = [self.reactions[j].name for j in allDeadReactions]
 
         if verbose:
-            print
+            print()
             if recursive:
                 print ("Producing and consuming reactions after removal of all "
                        "dead ends:")
                 for i in range(nMetabolites):
                     print ("%s (%u, %u)" % (self.metabolites[i],
                         len(producingReactions[i]), len(consumingReactions[i])))
-                print
+                print()
 
         return deadEnds, deadReactions
 
@@ -1441,7 +1449,7 @@ class MetabolicModel(object):
             if len(solution) != len(self.reactions):
                 raise ValueError("Length of solution vector and number of "
                                  "reactions in the model disagree")
-            flux = dict(zip(self.getReactionNames(), solution))
+            flux = dict(list(zip(self.getReactionNames(), solution)))
         activeMetabolites = {}
         activeReactions = []
         for reaname in flux:

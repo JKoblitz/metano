@@ -3,7 +3,7 @@ This module defines the class TransporterParser, a parser for transporter files.
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -21,6 +21,7 @@ You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+from builtins import object
 import re
 
 class TransporterParser(object):

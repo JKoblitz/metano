@@ -21,7 +21,7 @@ outratio(<metabolite_name>, <reaction_name>)
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -38,15 +38,21 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
-from defines import FbaParam, COPYRIGHT_VERSION_STRING
-from fba import OptionParser, FbAnalyzer
-from reactionparser import ReactionParser
-from paramparser import ParamParser
-from metabolicmodel import MetabolicModel
-from metabolicflux import MetabolicFlux
-from fva import FvAnalyzer
-import os, re
+from builtins import zip
+from builtins import range
+from builtins import object
+from metano.defines import FbaParam, COPYRIGHT_VERSION_STRING
+from metano.fba import OptionParser, FbAnalyzer
+from metano.reactionparser import ReactionParser
+from metano.paramparser import ParamParser
+from metano.metabolicmodel import MetabolicModel
+from metano.metabolicflux import MetabolicFlux
+from metano.fva import FvAnalyzer
+import os
+import re
 
 
 class ModelWatcher(object):
@@ -85,7 +91,6 @@ class ModelWatcher(object):
         with open(filename) as f:
             return self.readAssertionsFromFileHandle(f)
 
-
     def readAssertionsFromFileHandle(self, f):
         """ read the assertion file given as a file object
 
@@ -120,15 +125,15 @@ class ModelWatcher(object):
         # Replace reaction and metabolite names with unique non-matching IDs
         # including a type specifier (r or m)
 
-        idDict = dict(zip(self.model.reactionDict.keys(), "r"*len(self.model))+
-                      zip(self.model.metaboliteDict.keys(),
-                          "m"*len(self.model.metaboliteDict)))
+        idDict = dict(list(zip(list(self.model.reactionDict.keys()), "r"*len(self.model))) +
+                      list(zip(list(self.model.metaboliteDict.keys()),
+                               "m"*len(self.model.metaboliteDict))))
 
         # Find non-overlapping longest matches (greedy) of reaction and
         # metabolite names and replace with unique non-matching IDs
         counter = 0
         replaceDict, replaceDictRev = {}, {}
-        for ID in sorted(idDict.keys(), key=len, reverse=True):
+        for ID in sorted(list(idDict.keys()), key=len, reverse=True):
             pos = 0
             while pos >= 0:
                 pos = s.find(ID, pos)
@@ -147,9 +152,9 @@ class ModelWatcher(object):
 
         reaString = r"(:\d+r:)"
         metString = r"(:\d+m:)"
-        inratioPattern = re.compile(r"inratio\s*\(\s*"+metString+r"\s*,\s*"+
+        inratioPattern = re.compile(r"inratio\s*\(\s*"+metString+r"\s*,\s*" +
                                     reaString+r"\s*\)")
-        outratioPattern = re.compile(r"outratio\s*\(\s*"+metString+r"\s*,\s*"+
+        outratioPattern = re.compile(r"outratio\s*\(\s*"+metString+r"\s*,\s*" +
                                      reaString+r"\s*\)")
         minPattern = re.compile(r"min\s*\(\s*"+reaString+r"\s*\)")
         maxPattern = re.compile(r"max\s*\(\s*"+reaString+r"\s*\)")
@@ -158,26 +163,26 @@ class ModelWatcher(object):
 
         # Replace inratio/outratio expressions with references to self.inRatios/
         #                                                         self.outRatios
-        s = inratioPattern.sub(lambda x : "self.inRatios[%r].get(%r, 0.)" %
+        s = inratioPattern.sub(lambda x: "self.inRatios[%r].get(%r, 0.)" %
                                (replaceDictRev[x.group(1)],
                                 replaceDictRev[x.group(2)]), s)
-        s = outratioPattern.sub(lambda x : "self.outRatios[%r].get(%r, 0.)" %
+        s = outratioPattern.sub(lambda x: "self.outRatios[%r].get(%r, 0.)" %
                                 (replaceDictRev[x.group(1)],
                                  replaceDictRev[x.group(2)]), s)
 
         # Replace min/max expressions with references to self.minFlux/
         #                                                self.maxFlux
-        s = minPattern.sub(lambda x : "self.minFlux[%r]" %
+        s = minPattern.sub(lambda x: "self.minFlux[%r]" %
                            replaceDictRev[x.group(1)], s)
-        s = maxPattern.sub(lambda x : "self.maxFlux[%r]" %
+        s = maxPattern.sub(lambda x: "self.maxFlux[%r]" %
                            replaceDictRev[x.group(1)], s)
 
         # Replace reaction identifiers with references to self.flux
-        s = reaPattern.sub(lambda x : "self.flux[%r]" %
+        s = reaPattern.sub(lambda x: "self.flux[%r]" %
                            replaceDictRev[x.group(0)], s)
 
         # Replace metabolite identifiers with references to self.metFlux
-        s = metPattern.sub(lambda x : "self.metFlux[%r]" %
+        s = metPattern.sub(lambda x: "self.metFlux[%r]" %
                            replaceDictRev[x.group(0)], s)
 
         self.assertions = s.split('\n')
@@ -188,9 +193,8 @@ class ModelWatcher(object):
                 del self.assertions[i]
         for i in range(len(self.assertions_orig)-1, -1, -1):
             if (self.assertions_orig[i] == "" or
-                self.assertions_orig[i].isspace()):
+                    self.assertions_orig[i].isspace()):
                 del self.assertions_orig[i]
-
 
     def checkSyntax(self):
         """ check assertions for syntax errors without actually performing any
@@ -208,16 +212,16 @@ class ModelWatcher(object):
         bakMinFlux, bakMaxFlux = self.minFlux, self.maxFlux
 
         self.flux = MetabolicFlux(self.model, [0.]*len(self.model))
-        self.metFlux = dict(zip(self.model.metabolites,
-                                [0.]*len(self.model.metabolites)))
-        self.inRatios = dict(zip(self.model.metabolites,
-                                 [{}]*len(self.model.metabolites)))
-        self.outRatios = dict(zip(self.model.metabolites,
-                                  [{}]*len(self.model.metabolites)))
-        self.minFlux = dict(zip(self.model.reactionDict.keys(),
-                                [0.]*len(self.model)))
-        self.maxFlux = dict(zip(self.model.reactionDict.keys(),
-                                [0.]*len(self.model)))
+        self.metFlux = dict(list(zip(self.model.metabolites,
+                                     [0.]*len(self.model.metabolites))))
+        self.inRatios = dict(list(zip(self.model.metabolites,
+                                      [{}]*len(self.model.metabolites))))
+        self.outRatios = dict(list(zip(self.model.metabolites,
+                                       [{}]*len(self.model.metabolites))))
+        self.minFlux = dict(list(zip(list(self.model.reactionDict.keys()),
+                                     [0.]*len(self.model))))
+        self.maxFlux = dict(list(zip(list(self.model.reactionDict.keys()),
+                                     [0.]*len(self.model))))
         excepted = []
         for i in range(len(self.assertions)):
             try:
@@ -232,13 +236,12 @@ class ModelWatcher(object):
 
         if excepted:
             print ("The following assertions cannot be evaluated due to errors"
-                   ":\n  "+ "\n  ".join(excepted))
+                   ":\n  " + "\n  ".join(excepted))
 #  The following was removed because the Python error messages are misleading.
 #            for a in excepted:
 #                print "\n  %r\n  %s: %s\n" % (a[0], a[1], a[2])
             return False
         return True
-
 
     def run(self, fbaParams, syntaxOk=True, printExcepted=False):
         """ check assertions against results of FBA, FVA, & split-ratio analysis
@@ -269,7 +272,7 @@ class ModelWatcher(object):
             outRatios, inRatios = splitRatios[met]
             self.metFlux[met] = sum(inRatios[rea][1] for rea in inRatios)
             self.outRatios[met] = dict((rea, outRatios[rea][0])
-                                        for rea in outRatios)
+                                       for rea in outRatios)
             self.inRatios[met] = dict((rea, inRatios[rea][0])
                                       for rea in inRatios)
 
@@ -297,14 +300,14 @@ class ModelWatcher(object):
 
         if printExcepted and excepted:
             print ("The following assertions could not be evaluated due to "
-                   "errors:\n  " +  "\n  ".join(excepted))
+                   "errors:\n  " + "\n  ".join(excepted))
         if failed:
-            print "The following assertions failed:\n  " +  "\n  ".join(failed)
+            print("The following assertions failed:\n  " + "\n  ".join(failed))
         else:
             if not syntaxOk or (printExcepted and excepted):
-                print "All other assertions hold."
+                print("All other assertions hold.")
             else:
-                print "All assertions hold."
+                print("All assertions hold.")
 
 
 def main():
@@ -331,7 +334,7 @@ def main():
     parser.check_required("-a")
 
     if options.tolerance <= 0. or options.tolerance > 1.:
-        print "Error: Tolerance must be in interval (0, 1]"
+        print("Error: Tolerance must be in interval (0, 1]")
         exit()
 
     # 2. Create MetabolicModel from reaction file
@@ -340,15 +343,15 @@ def main():
     model = MetabolicModel()
     try:
         model.addReactionsFromFile(options.reactionFile, rparser)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(options.reactionFile))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("Error in reaction file %s:" %
                os.path.basename(options.reactionFile))
-        print strerror
+        print(strerror)
         exit()
 
     # 3. Parse scenario file
@@ -357,25 +360,25 @@ def main():
     pparser = ParamParser()
     try:
         # Parse file, get maxmin, name of objective function, and solver name
-        maxmin, objStr, solver, numIter, lb , ub = \
+        maxmin, objStr, solver, numIter, lb, ub = \
             pparser.parse(options.paramFile)
         if solver == "":
             solver = "default"
         fbaParams = FbaParam(solver, maxmin, objStr, numIter)
         # Set flux bounds in model
         model.setFiniteBounds(lb, ub, True, model_messages)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(options.paramFile))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("Error in scenario file %s:" %
                os.path.basename(options.paramFile))
-        print strerror
+        print(strerror)
         exit()
-    except ValueError, strerror:
-        print strerror
+    except ValueError as strerror:
+        print(strerror)
         exit()
 
     # 4. Create ModelWatcher object and parse assertion file
@@ -383,15 +386,15 @@ def main():
     maw = ModelWatcher(model, options.tolerance)
     try:
         maw.readAssertionsFromFile(options.assertionFile)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(options.assertionFile))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("Error in assertion file %s:" %
                os.path.basename(options.assertionFile))
-        print strerror
+        print(strerror)
         exit()
 
     # 5. First perform syntax check, then evaluate assertions

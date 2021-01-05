@@ -3,7 +3,7 @@ This module defines the class ParamParser, a parser for scenario files for FBA.
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -20,12 +20,17 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import absolute_import
+from __future__ import division
 
 # TODO Release:
 # - remove SAMESIGN/DIFFSIGN keywords & getNLConstraints()
 
-from defines import Verbosity
-from linconstraints import LinearConstraint
+from builtins import range
+from past.utils import old_div
+from builtins import object
+from metano.defines import Verbosity
+from metano.linconstraints import LinearConstraint
 from numpy import array, inf, any
 import re
 
@@ -56,7 +61,6 @@ class LinExprParser(object):
     _term1 = re.compile(_term)
     _term2ff = re.compile(r"([+-]):\s*"+_term)
 
-
     @staticmethod
     def parseString(s):
         sOrig = s
@@ -65,7 +69,7 @@ class LinExprParser(object):
         # not part of words with the illegal character ':'
         for op in LinExprParser._operators:
             s = (" "+op+": ").join(re.split("\s"+LinExprParser._escOp.get(op,
-                                            op)+"(?:\s|$)", s))
+                                                                          op)+"(?:\s|$)", s))
         floatHits = list(LinExprParser._floatSpcPat.finditer(s))
         floatPos = [i.end() for i in floatHits[::-1]]
         for i in floatPos:
@@ -77,7 +81,7 @@ class LinExprParser(object):
         if not m:
             raise ValueError("string '%s' is not a linear expression" % sOrig)
         t.append(("+",)+m.groups())
-        s=s[m.end():]
+        s = s[m.end():]
 
         while s:
             m = LinExprParser._term2ff.match(s)
@@ -85,10 +89,9 @@ class LinExprParser(object):
                 raise ValueError("string '%s' is not a linear expression" %
                                  sOrig)
             t.append(m.groups())
-            s=s[m.end():]
+            s = s[m.end():]
 
         return LinExprParser._evalGroups(t)
-
 
     @staticmethod
     def _evalGroups(listOfTuples):
@@ -124,7 +127,7 @@ class LinIneqParser(object):
     @staticmethod
     def parseString(s):
         parts = re.split(LinIneqParser._rel, s)
-        if len (parts) != 3:
+        if len(parts) != 3:
             raise ValueError("string '%s' is not a linear inequality")
         return LinearConstraint(LinExprParser.parseString(parts[0]) +
                                 [parts[1], float(parts[2])])
@@ -171,10 +174,9 @@ class ParamParser(object):
     # Keywords that must be present (at least once)
     required_keywords = ["OBJ"]
     # Keywords that must be unique, i.e. may be present at most once
-    unique_keywords   = ["OBJ", "SOLVER"]
+    unique_keywords = ["OBJ", "SOLVER"]
 
-
-    def __init__(self, commentSign = '#'):
+    def __init__(self, commentSign='#'):
         """ initializes the ParamParser
 
         Keyword arguments:
@@ -185,11 +187,10 @@ class ParamParser(object):
         self.clear()
         self.comment_sign = commentSign
 
-
     def clear(self):
         """ clears all internal variables, warnings and info messages
         """
-        self.maxmin = False # True: maximize, False: minimize objective function
+        self.maxmin = False  # True: maximize, False: minimize objective function
         self.obj_name = ""
         self.solver = ""
         self.numIter = -1  # Negative number -> not set
@@ -212,7 +213,6 @@ class ParamParser(object):
         # elements are pairs (level, msg)
         self.messages = []
 
-
     def getMessages(self, level=Verbosity.INFO):
         """ returns a list of all messages at or above the given level of
             severity
@@ -220,14 +220,12 @@ class ParamParser(object):
         """
         return [x[1] for x in self.messages if x[0] <= level]
 
-
     def parse(self, filename):
         """ parse the scenario file identified by filename
             -- wrapper for parseByHandle()
         """
         with open(filename) as f:
             return self.parseByHandle(f)
-
 
     def parseByHandle(self, f):
         """ parse the scenario file given as a file object (must be open)
@@ -243,11 +241,11 @@ class ParamParser(object):
         spec_ub     -- dictionary of specific upper bounds (- '' -)
         """
         # Table of functions for parsing lines by keyword (1st word of line)
-        line_parsers = {"OBJ"     : self.parseObj,
-                        "SOLVER"  : self.parseSolver,
+        line_parsers = {"OBJ": self.parseObj,
+                        "SOLVER": self.parseSolver,
                         "NUM_ITER": self.parseNumIter,
-                        "LB"      : self.parseLb,
-                        "UB"      : self.parseUb,
+                        "LB": self.parseLb,
+                        "UB": self.parseUb,
                         "SAMESIGN": self.parseSameSign,
                         "DIFFSIGN": self.parseDiffSign}
 
@@ -255,9 +253,10 @@ class ParamParser(object):
         for line in f:
             line_no += 1
             comment_pos = line.find(self.comment_sign)
-            line = line[:comment_pos].strip() if comment_pos >= 0 else line.strip()
+            line = line[:comment_pos].strip(
+            ) if comment_pos >= 0 else line.strip()
             if line == "":
-                continue # Skip blank lines
+                continue  # Skip blank lines
 
             # Try to interpret line as equation/inequality definition
             try:
@@ -299,7 +298,6 @@ class ParamParser(object):
         return (self.maxmin, self.obj_name, self.solver, self.numIter, self.lb,
                 self.ub)
 
-
     @staticmethod
     def linExprToVector(linExpr, reactions, factor=1., nCols=-1, strict=True):
         """ convert the given linear expression to a coefficient vector
@@ -324,7 +322,7 @@ class ParamParser(object):
         coefVec = [0.]*nCols
 
         try:
-            iter(reactions.values()[0])
+            iter(list(reactions.values())[0])
             isSplit = True
         except TypeError:
             isSplit = False
@@ -414,7 +412,7 @@ class ParamParser(object):
         ineqs     -- list of - '' - for the inequality constraints
         """
         eqs = []   # Equality constraints
-        ineqs = [] # Inequality constraints
+        ineqs = []  # Inequality constraints
         for elem in constraints:
             coefVec = ParamParser.linExprToVector(elem.lhs, reactions,
                                                   nCols=nCols, strict=False)
@@ -430,7 +428,6 @@ class ParamParser(object):
                     raise ValueError("constraint '%s' is always false" % elem)
 
         return eqs, ineqs
-
 
     @staticmethod
     def convertObjFuncToLinVec(objStr, reactions, nCols=-1, maxmin=False):
@@ -458,7 +455,6 @@ class ParamParser(object):
                                  "expression" % objStr)
         return ParamParser.linExprToVector(objExpr, reactions, maxmin_factor,
                                            nCols)
-
 
     def getNLConstraints(self, reactions):
         """ build lists of nonlinear constraints (lambda functions) from
@@ -498,7 +494,7 @@ class ParamParser(object):
                 continue
 
             r1index, r2index = reactions[r1], reactions[r2]
-            nlc.append(lambda v : -v[r1index]*v[r2index])
+            nlc.append(lambda v: -v[r1index]*v[r2index])
 
             if r1index > r2index:
                 # Make sure that r1index < r2index
@@ -506,9 +502,9 @@ class ParamParser(object):
                 r1index = r2index
                 r2index = tmp
 
-            nlc_grad.append(lambda v : array(
-                [0. for _ in range(r1index)]+[-v[r2index]]+
-                [0. for _ in range(r1index+1, r2index)]+[-v[r1index]]+
+            nlc_grad.append(lambda v: array(
+                [0. for _ in range(r1index)]+[-v[r2index]] +
+                [0. for _ in range(r1index+1, r2index)]+[-v[r1index]] +
                 [0. for _ in range(r2index+1, numReactions)]))
 
         nonexisting.clear()
@@ -532,7 +528,7 @@ class ParamParser(object):
                 continue
 
             r1index, r2index = reactions[r1], reactions[r2]
-            nlc.append(lambda v : v[r1index]*v[r2index])
+            nlc.append(lambda v: v[r1index]*v[r2index])
 
             if r1index > r2index:
                 # Make sure that r1index < r2index
@@ -540,12 +536,11 @@ class ParamParser(object):
                 r1index = r2index
                 r2index = tmp
 
-            nlc_grad.append(lambda v : array(
-                [0. for _ in range(r1index)]+[v[r2index]]+
-                [0. for _ in range(r1index+1, r2index)]+[v[r1index]]+
+            nlc_grad.append(lambda v: array(
+                [0. for _ in range(r1index)]+[v[r2index]] +
+                [0. for _ in range(r1index+1, r2index)]+[v[r1index]] +
                 [0. for _ in range(r2index+1, numReactions)]))
         return nlc, nlc_grad
-
 
     def parseObj(self, line, line_no=0):
         """ parses the OBJ line, which defines the objective function
@@ -553,17 +548,18 @@ class ParamParser(object):
         try:
             [mm, name] = line.split(None, 1)
         except ValueError:
-            msg = self.error(line_no, "Malformed OBJ definition", self.obj_hint)
+            msg = self.error(
+                line_no, "Malformed OBJ definition", self.obj_hint)
             raise SyntaxError(msg)
 
         try:
-            self.maxmin = {"MAX" : True, "MIN" : False}[mm.upper()]
+            self.maxmin = {"MAX": True, "MIN": False}[mm.upper()]
         except KeyError:
-            msg = self.error(line_no, "Malformed OBJ definition", self.obj_hint)
+            msg = self.error(
+                line_no, "Malformed OBJ definition", self.obj_hint)
             raise SyntaxError(msg)
 
         self.obj_name = name
-
 
     def parseSolver(self, line, line_no=0):
         """ parses the SOLVER line, which defines the preferred LP/QP/NLP solver
@@ -573,7 +569,6 @@ class ParamParser(object):
             msg = self.error(line_no, "Malformed SOLVER definition",
                              self.solver_hint)
             raise SyntaxError(msg)
-
 
     def parseNumIter(self, line, line_no=0):
         """ parses a NUM_ITER line, which defines the number of iterations in
@@ -590,7 +585,6 @@ class ParamParser(object):
             msg = self.error(line_no, "Illegal integer value in NUM_ITER "
                              "definition", self.numiter_hint)
             raise SyntaxError(msg)
-
 
     def parseLb(self, line, line_no=0):
         """ parses an LB line, which defines a specific lower bound
@@ -613,7 +607,6 @@ class ParamParser(object):
                              "definition", self.lb_hint)
             raise SyntaxError(msg)
 
-
     def parseUb(self, line, line_no=0):
         """ parses a UB line, which defines a specific upper bound
         """
@@ -634,7 +627,6 @@ class ParamParser(object):
             msg = self.error(line_no, "Illegal floating-point value in UB "
                              "definition", self.ub_hint)
             raise SyntaxError(msg)
-
 
     def parseSameSign(self, line, line_no=0):
         """ parses a SAMESIGN line, which defines a nonlinear constraint that
@@ -668,7 +660,6 @@ class ParamParser(object):
         if addToSet:
             self.samesign_pairs.add((r1, r2))
 
-
     def parseDiffSign(self, line, line_no=0):
         """ parses a DIFFSIGN line, which defines a nonlinear constraint that
             the fluxes through two reactions must have opposite signs
@@ -696,7 +687,6 @@ class ParamParser(object):
             self.messages.append((Verbosity.WARNING, msg))
         else:
             self.diffsign_pairs.add((r1, r2))
-
 
     @staticmethod
     def _simplifyLinExpr(lexpr):
@@ -730,7 +720,6 @@ class ParamParser(object):
                 del result[i]
 
         return result
-
 
     def _simplifyLinIneqs(self):
         """ simplify self.lin_constraints by
@@ -766,13 +755,13 @@ class ParamParser(object):
                 coef, name = lhs[0]
                 lb = self.lb[name] if name in self.lb else -inf
                 ub = self.ub[name] if name in self.ub else inf
-                tmpValue = lineq.rhs/coef
+                tmpValue = old_div(lineq.rhs, coef)
 
                 if lineq.isEq:
                     if name in self.lb:
                         if tmpValue < lb:
                             msg = "'%s' (line %u) violates LB %s %g" % (line,
-                                line_no, name, lb)
+                                                                        line_no, name, lb)
                             raise SyntaxError(msg)
                         msg = ("Warning: '%s' (line %u) overrides earlier "
                                "LB %s %g" % (line, line_no, name, lb))
@@ -781,7 +770,7 @@ class ParamParser(object):
                     if name in self.ub:
                         if tmpValue > ub:
                             msg = "'%s' (line %u) violates UB %s %g" % (line,
-                                line_no, name, ub)
+                                                                        line_no, name, ub)
                             raise SyntaxError(msg)
                         msg = ("Warning: '%s' in line %u overrides earlier "
                                "UB %s %g" % (line, line_no, name, ub))
@@ -831,7 +820,6 @@ class ParamParser(object):
                 del self.lin_constraints[i]
                 del self.lin_constraints_orig[i]
 
-
     def checkBounds(self):
         """ checks whether all pairs of lower and upper bounds (specific or
         unspecific as applicable) are sensible (i.e. lower bound <= upper bound)
@@ -842,7 +830,6 @@ class ParamParser(object):
                     msg = self.error(0, "Bound mismatch: LB(%s) > UB(%s)" %
                                      (name, name))
                     raise SyntaxError(msg)
-
 
     def checkUnique(self, keyword, line_no=0):
         """ check whether occurrence of keyword is unique
@@ -861,7 +848,6 @@ class ParamParser(object):
                              keyword)
             raise SyntaxError(msg)
         self.got[keyword] = True
-
 
     def error(self, line_no=0, msg="Syntax error", hint=""):
         """ generate an error message

@@ -3,7 +3,7 @@ This module defines the class ReactionParser, a parser for reaction files.
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -20,27 +20,30 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import absolute_import
 
-from defines import Verbosity, ReaFileStruc
+from builtins import map
+from builtins import object
+from metano.defines import Verbosity, ReaFileStruc
 
 
 def _splitAtPlus(s):
     """ split the string at plus signs that are preceded or followed by
         whitespace
     """
-    tokens = map(str.strip, s.split(' +'))
-    tokensList = map(lambda x : x.split('\t+'), tokens)
+    tokens = list(map(str.strip, s.split(' +')))
+    tokensList = [x.split('\t+') for x in tokens]
     tokens = []
     for t in tokensList:
-        tokens += map(str.strip, t)
-    tokensList = map(lambda x : x.split('+ '), tokens)
+        tokens += list(map(str.strip, t))
+    tokensList = [x.split('+ ') for x in tokens]
     tokens = []
     for t in tokensList:
-        tokens += map(str.strip, t)
-    tokensList = map(lambda x : x.split('+\t'), tokens)
+        tokens += list(map(str.strip, t))
+    tokensList = [x.split('+\t') for x in tokens]
     tokens = []
     for t in tokensList:
-        tokens += map(str.strip, t)
+        tokens += list(map(str.strip, t))
     return tokens
 
 
@@ -68,17 +71,15 @@ class ReactionParser(object):
         self.clear()
         self.skipCommentLines = skipCommentLines
 
-
     def clear(self):
         """ clear all internal variables, warnings and info messages
         """
         # List of warnings and info messages generated during parsing,
         # elements are pairs (level, msg)
         self.messages = []
-        # If true, don't assign rows starting with a hash sign (#) to the 
+        # If true, don't assign rows starting with a hash sign (#) to the
         # reaction below the comment
         self.skipCommentLines = False
-
 
     def getMessages(self, level=Verbosity.INFO):
         """ return a list of all messages at or above the given level of
@@ -87,14 +88,12 @@ class ReactionParser(object):
         """
         return [x[1] for x in self.messages if x[0] <= level]
 
-
     def parse(self, filename):
         """ parse the reaction file identified by filename
             -- wrapper for parseByHandle()
         """
         with open(filename) as f:
             return self.parseByHandle(f)
-
 
     def parseByHandle(self, f):
         """ parse the reaction file given as a file object
@@ -204,13 +203,13 @@ class ReactionParser(object):
                     metabNames.add(name)
                     metabSet.add(name)
 
-            result.append((rea_name, educts, arrow, products, reaction_comment))
+            result.append((rea_name, educts, arrow,
+                           products, reaction_comment))
 
         msg = ("Info: The metabolic network has %u reactions and %u metabolites"
                ".") % (len(reactionSet), len(metabSet))
         self.messages.append((Verbosity.INFO, msg))
         return result
-
 
     def process_metabolites(self, metab_strings, line_no):
         """ process a list of metabolites in a reaction (reactants or products)
@@ -255,7 +254,6 @@ class ReactionParser(object):
             result.append((coefficient, name))
         return result
 
-
     def error(self, line_no=0, msg="Malformed reaction", hint=True):
         """ generate an error message
 
@@ -273,7 +271,6 @@ class ReactionParser(object):
             s += self.format_hint
         return s
 
-
     def fixfile(self, filename, outfilename):
         """ fix reaction file by replacing spaces in reaction and metabolite
             names with underscores and converting metabolite names to lowercase
@@ -286,7 +283,6 @@ class ReactionParser(object):
         with open(filename) as f:
             with open(outfilename, 'w') as outf:
                 self.fixfileByHandles(f, outf)
-
 
     def fixfileByHandles(self, f, outf):
         """ fix reaction file by replacing spaces in reaction and metabolite
@@ -313,7 +309,7 @@ class ReactionParser(object):
             line = line[:comment_pos]
             if line == "" or line.isspace():
                 outf.write(comment+'\n')
-                continue # Skip blank lines
+                continue  # Skip blank lines
 
             # Split line at delimiter
             delimiter_pos = line.find(ReaFileStruc.delimiter)
@@ -382,7 +378,6 @@ class ReactionParser(object):
                                     if key != metabDict[key]])))
         self.messages.append((Verbosity.INFO, msg))
 
-
     def fix_metab_names(self, metab_strings, metabDict):
         """ process a list of metabolites; called internally by fixfileByHandles
 
@@ -416,7 +411,7 @@ class ReactionParser(object):
                 try:
                     float(entry[0])
                     names_fixed.append(entry[0] + ' ' +
-                        self.getFixedMetabName(entry[1], metabDict, newNames))
+                                       self.getFixedMetabName(entry[1], metabDict, newNames))
                 except ValueError:
                     names_fixed.append(self.getFixedMetabName(
                         metab_string.lower(), metabDict, newNames))

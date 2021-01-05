@@ -10,7 +10,7 @@ wildtype.
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -27,20 +27,20 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
-# TODO Release:
-# - remove wMOMA: _DEFAULT_ALPHA/BETA, weighted, weights, weightVec
-# - remove option_group("Extra options for weighted MOMA")
-# - remove step 7. (Optionally) Read FVA solution and compute weights
-
-from fba import OptionParser, FbAnalyzer
-from moma import MomaAnalyzer, _DEFAULT_ALPHA, _DEFAULT_BETA
-from fva import FvAnalyzer
-from reactionparser import ReactionParser
-from paramparser import ParamParser
-from metabolicmodel import MetabolicModel
-from metabolicflux import MetabolicFlux
-from defines import (SolverStatus, FbaParam, padNumber, When, decodeWhen,
+from builtins import zip
+from builtins import map
+from builtins import range
+from metano.fba import OptionParser, FbAnalyzer
+from metano.moma import MomaAnalyzer, _DEFAULT_ALPHA, _DEFAULT_BETA
+from metano.fva import FvAnalyzer
+from metano.reactionparser import ReactionParser
+from metano.paramparser import ParamParser
+from metano.metabolicmodel import MetabolicModel
+from metano.metabolicflux import MetabolicFlux
+from metano.defines import (SolverStatus, FbaParam, padNumber, When, decodeWhen,
                      COPYRIGHT_VERSION_STRING)
 from numpy import array, dot, nan, inf, empty
 import csv, os
@@ -112,7 +112,7 @@ def serial_knockout(model, solver, objective, wtSolution, fbaParams,
 
     result = []
     for group, reaList in koGroups:
-        print group
+        print(group)
 
         # Restrict flux through all reactions in group to zero
         tmp_lb = {}  # {index in model : LB value}
@@ -128,7 +128,7 @@ def serial_knockout(model, solver, objective, wtSolution, fbaParams,
             model.reactions[rIndex].lb = model.reactions[rIndex].ub = 0.
 
         if not tmp_lb:
-            print "  -> skipped (only blocked reactions)"
+            print("  -> skipped (only blocked reactions)")
             result.append((0., 0., wtObjVal))
             if filePrefix:
                 wtSolution.writeToFile(filePrefix+group+_FILE_SUFFIX)
@@ -236,7 +236,7 @@ def parallel_ko_dispatch(comm, numprocs, model, solver, objective, wtSolution,
     while nDone < nJobs:
         while free_processes and nxt < nJobs:
             # Assign reaction to free process
-            print koGroups[nxt][0]
+            print(koGroups[nxt][0])
             proc_index = free_processes.pop()
             # Send index of next job to next free process
             comm.Send(nxt, proc_index)
@@ -333,7 +333,7 @@ def parallel_ko_worker(comm, model, solver, wtVec, fbaParams, koGroups=None,
             model.reactions[rIndex].lb = model.reactions[rIndex].ub = 0.
 
         if not tmp_lb:
-            print "  - skipped group '%s' (only blocked reactions)" % group
+            print("  - skipped group '%s' (only blocked reactions)" % group)
             comm.Send(wtVec)
             comm.Recv(i)
             continue
@@ -470,20 +470,20 @@ def main():
             parser.check_required("-r")
             parser.check_required("-p")
             parser.check_required("-o")
-        except SystemExit, e:
+        except SystemExit as e:
             _mpi_exit(comm, e.args[0])
 
         weighted = bool(options.wMomaFvaFile)
         if weighted:
             if options.alpha < 0.:
-                print "Error: alpha must be non-negative."
+                print("Error: alpha must be non-negative.")
                 _mpi_exit(comm, 1)
             if options.beta <= 0.:
-                print "Error: beta must be positive."
+                print("Error: beta must be positive.")
                 _mpi_exit(comm, 1)
 
         if options.numIter < 1:
-            print "Error: Number of NLP runs must be positive."
+            print("Error: Number of NLP runs must be positive.")
             _mpi_exit(comm, 1)
 
         try:
@@ -500,15 +500,15 @@ def main():
         model = MetabolicModel()
         try:
             model.addReactionsFromFile(options.reactionFile, rparser)
-        except IOError, strerror:
+        except IOError as strerror:
             print ("An error occurred while trying to read file %s:" %
                    os.path.basename(options.reactionFile))
-            print strerror
+            print(strerror)
             _mpi_exit(comm, 1)
-        except SyntaxError, strerror:
+        except SyntaxError as strerror:
             print ("Error in reaction file %s:" %
                    os.path.basename(options.reactionFile))
-            print strerror
+            print(strerror)
             _mpi_exit(comm, 1)
 
         # 3. Parse scenario file
@@ -525,25 +525,25 @@ def main():
             fbaParams = FbaParam(fbaSolver, maxmin, objStr, numIter)
             lin_constraints = pparser.lin_constraints
             fbaParams.setLinConstraints(lin_constraints)
-        except IOError, strerror:
+        except IOError as strerror:
             print ("An error occurred while trying to read file %s:" %
                    os.path.basename(options.paramFile))
-            print strerror
+            print(strerror)
             _mpi_exit(comm, 1)
-        except SyntaxError, strerror:
+        except SyntaxError as strerror:
             print ("Error in scenario file %s:" %
                    os.path.basename(options.paramFile))
-            print strerror
+            print(strerror)
             _mpi_exit(comm, 1)
-        except ValueError, strerror:
-            print strerror
+        except ValueError as strerror:
+            print(strerror)
             _mpi_exit(comm, 1)
 
         # Show warning and info messages of parsers
         msgs = (rparser.getMessages() + pparser.getMessages() +
                 [x[1] for x in model_messages])
         if msgs:
-            print '\n'+'\n'.join(msgs)
+            print('\n'+'\n'.join(msgs))
 
         # 4. Read groups of reactions from file (if given)
 
@@ -558,7 +558,7 @@ def main():
                     csvReader = csv.reader(f, delimiter=';')
 
                     for row in csvReader:
-                        group, rea = map(str.strip, row[:2])
+                        group, rea = list(map(str.strip, row[:2]))
                         koOrder.append(rea)
 
                         if group in koGroupDict:
@@ -576,15 +576,15 @@ def main():
                        (os.path.basename(options.koGroupDictFile),
                         csvReader.line_num, e))
                 _mpi_exit(comm, 1)
-            except ValueError, strerror:
+            except ValueError as strerror:
                 print ("Error in CSV file %s, line %d: %s" %
                        (os.path.basename(options.koGroupDictFile),
                         csvReader.line_num, strerror))
                 _mpi_exit(comm, 1)
-            except IOError, strerror:
+            except IOError as strerror:
                 print ("An error occurred while trying to read file %s:" %
                        os.path.basename(options.koGroupDictFile))
-                print strerror
+                print(strerror)
                 _mpi_exit(comm, 1)
 
             # Generate list of knockouts (order as close as possible to order of
@@ -614,15 +614,15 @@ def main():
             try:
                 fbaSolution, redMinmax = \
                     FvAnalyzer.parseSolutionFile(options.redFvaFile)
-            except IOError, strerror:
+            except IOError as strerror:
                 print ("An error occurred while trying to read file %s:" %
                        os.path.basename(options.redFvaFile))
-                print strerror
+                print(strerror)
                 _mpi_exit(comm, 1)
-            except SyntaxError, strerror:
+            except SyntaxError as strerror:
                 print ("Error in FVA solution file %s:" %
                        os.path.basename(options.redFvaFile))
-                print strerror
+                print(strerror)
                 _mpi_exit(comm, 1)
 
             if not fbaSolution.hasSameReactions(model):
@@ -645,15 +645,15 @@ def main():
             try:
                 fbaSolution, wmomaMinmax = \
                     FvAnalyzer.parseSolutionFile(options.wMomaFvaFile)
-            except IOError, strerror:
+            except IOError as strerror:
                 print ("An error occurred while trying to read file %s:" %
                        os.path.basename(options.wMomaFvaFile))
-                print strerror
+                print(strerror)
                 _mpi_exit(comm, 1)
-            except SyntaxError, strerror:
+            except SyntaxError as strerror:
                 print ("Error in FVA solution file %s:" %
                        os.path.basename(options.wMomaFvaFile))
-                print strerror
+                print(strerror)
                 _mpi_exit(comm, 1)
 
             if not fbaSolution.hasSameReactions(model):
@@ -671,15 +671,15 @@ def main():
             wtSolution = MetabolicFlux()
             try:
                 wtSolution.readFromFile(options.wtSolution)
-            except IOError, strerror:
+            except IOError as strerror:
                 print ("An error occurred while trying to read file %s:" %
                        os.path.basename(options.wtSolution))
-                print strerror
+                print(strerror)
                 _mpi_exit(comm, 1)
-            except SyntaxError, strerror:
+            except SyntaxError as strerror:
                 print ("An error occurred parsing file %s:" %
                        os.path.basename(options.wtSolution))
-                print strerror
+                print(strerror)
                 _mpi_exit(comm, 1)
 
             if not wtSolution.hasSameReactions(model):
@@ -705,7 +705,7 @@ def main():
                 print ("Info: The reduced network for FBA has %u reactions and "
                        "%u metabolites." % ndim[1::-1])
             if len(wtSolution) == 0:
-                print "Model is infeasible or unbounded. Nothing to do."
+                print("Model is infeasible or unbounded. Nothing to do.")
                 _mpi_exit(comm)
 
         solver = options.solver
@@ -744,7 +744,7 @@ def main():
 
         modelStr = modelRed.writeToString(False, False, False)
         nReactions = len(modelRed)
-        lb, ub = map(array, modelRed.getBounds())
+        lb, ub = list(map(array, modelRed.getBounds()))
         # Build coefficient vector of linear objective function
         objective = array(ParamParser.convertObjFuncToLinVec(objStr,
                                                         modelRed.reactionDict))
@@ -815,14 +815,14 @@ def main():
 
     # 10. Write output to file
 
-        print "Writing output file."
+        print("Writing output file.")
         try:
             write_output(options.outputFile, [x[0] for x in koGroups], result,
                          wt_obj_value)
-        except IOError, strerror:
+        except IOError as strerror:
             print ("Unable to write to file %s:" %
                    os.path.basename(options.outputFile))
-            print strerror
+            print(strerror)
             _mpi_exit(comm, 1)
 
 
@@ -831,28 +831,39 @@ def write_output(filename, group_names, result, wt_obj_val):
     # longest occurring string)
     output = []
     for i in range(len(group_names)):
-        output.append((group_names[i],) + tuple(map(padNumber, map(repr,
-            (100.*result[i][2]/wt_obj_val,) + result[i]))))
+        output.append((group_names[i],) + tuple(map(padNumber, list(map(repr,
+            (100.*result[i][2]/wt_obj_val,) + result[i])))))
         maxlen = tuple(map(len, output[-1]))
 
     # Create list of (index, value of objective function) pairs, sorted by value
     # in descending order - for ordering the rows of the output table
-    order = sorted(zip(range(len(result)), [x[2] for x in result]),
+    order = sorted(zip(list(range(len(result))), [x[2] for x in result]),
                    key=lambda x : x[1], reverse=True)
 
     with open(filename, 'w') as f:
-        # Write table head
-        f.write("NAME".ljust(maxlen[0])+"   "+"OBJ_FUN(%)".center(maxlen[1])+" "
-                +"DISTANCE".rjust(maxlen[2])+" "+"ABS_DIFF".rjust(maxlen[3])+" "
-                +"OBJ_FUN_VAL".rjust(maxlen[4])+"\n")
+        if filename.split(".")[-1] == "csv":
+            csvwriter = csv.writer(f, delimiter=";", quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            # Write Header to CSV file
+            csvwriter.writerow(["NAME", "OBJ_FUN(%)", "DISTANCE", "ABS_DIFF", "OBJ_FUN_VAL"])
+            # Construct output table and get widths of table columns (length of
+            # longest occurring string)
+            for i, _ in order:
+                reaName, objfPercent, dist, diff, objfValue = output[i]
+                csvwriter.writerow(output[i])
 
-        # Write table rows
-        for i, _ in order:
-            reaName, objfPercent, dist, diff, objfValue = output[i]
-            f.write(reaName.ljust(maxlen[0]) + " : " +
-                    objfPercent.rjust(maxlen[1]) + " " + dist.rjust(maxlen[2]) +
-                    " " + diff.rjust(maxlen[3]) + " " +
-                    objfValue.rjust(maxlen[4]) + "\n")
+        else:
+            # Write table head
+            f.write("NAME".ljust(maxlen[0])+"   "+"OBJ_FUN(%)".center(maxlen[1])+" "
+                    +"DISTANCE".rjust(maxlen[2])+" "+"ABS_DIFF".rjust(maxlen[3])+" "
+                    +"OBJ_FUN_VAL".rjust(maxlen[4])+"\n")
+
+            # Write table rows
+            for i, _ in order:
+                reaName, objfPercent, dist, diff, objfValue = output[i]
+                f.write(reaName.ljust(maxlen[0]) + " : " +
+                        objfPercent.rjust(maxlen[1]) + " " + dist.rjust(maxlen[2]) +
+                        " " + diff.rjust(maxlen[3]) + " " +
+                        objfValue.rjust(maxlen[4]) + "\n")
 
 
 if __name__ == "__main__":

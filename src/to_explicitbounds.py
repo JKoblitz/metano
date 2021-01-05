@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-""" 
+"""
 Script for adding bounds imposed by the irreversibility of some reactions to
 a metano scenario file
 
@@ -13,7 +13,7 @@ MetabolicModel.writeBoundsToParamFileHandle().
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -30,12 +30,14 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
-from fba import OptionParser
-from reactionparser import ReactionParser
-from paramparser import ParamParser
-from metabolicmodel import MetabolicModel
-from defines import COPYRIGHT_VERSION_STRING
+from metano.fba import OptionParser
+from metano.reactionparser import ReactionParser
+from metano.paramparser import ParamParser
+from metano.metabolicmodel import MetabolicModel
+from metano.defines import COPYRIGHT_VERSION_STRING
 import os
 
 
@@ -63,15 +65,15 @@ def main():
     model = MetabolicModel()
     try:
         model.addReactionsFromFile(options.reactionFile, rparser)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(options.reactionFile))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("Error in reaction file %s:" %
                os.path.basename(options.reactionFile))
-        print strerror
+        print(strerror)
         exit()
 
     # 3. Parse scenario file
@@ -80,35 +82,35 @@ def main():
     pparser = ParamParser()
     try:
         # Parse file, get maxmin, name of objective function, and solver name
-        maxmin, obj_name, solver, numIter, lb , ub = \
+        maxmin, obj_name, solver, numIter, lb, ub = \
             pparser.parse(options.inputFile)
         # Set flux bounds in model (for parameter check)
         model.setFiniteBounds(lb, ub, True, model_messages)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(options.inputFile))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("Error in scenario file %s:" %
                os.path.basename(options.inputFile))
-        print strerror
+        print(strerror)
         exit()
-    except ValueError, strerror:
-        print strerror
+    except ValueError as strerror:
+        print(strerror)
         exit()
 
     # Show warning and info messages of parsers
     msgs = (rparser.getMessages() + pparser.getMessages() +
             [x[1] for x in model_messages])
     if msgs:
-        print '\n'.join(msgs)
+        print('\n'.join(msgs))
 
     # 4. Write new scenario file
 
     try:
         with open(options.outputFile, 'w') as f:
-            str_maxmin = {True : "max", False : "min"}[maxmin]
+            str_maxmin = {True: "max", False: "min"}[maxmin]
             f.write("OBJ %s %s\n" % (str_maxmin, obj_name))
             if solver != "":
                 f.write("SOLVER %s\n" % solver)
@@ -117,10 +119,10 @@ def main():
             f.write("\n")
             model.writeBoundsToParamFileHandle(f)
             f.write("\n")
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to write file %s:" %
                os.path.basename(options.outputFile))
-        print strerror
+        print(strerror)
         exit()
 
 

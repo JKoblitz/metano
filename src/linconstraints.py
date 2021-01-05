@@ -4,7 +4,7 @@ equality or inequality constraint.
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -22,6 +22,7 @@ You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+from builtins import object
 class LinearConstraint(object):
     """ Represents a single linear equality or inequality constraint
 
@@ -43,7 +44,7 @@ class LinearConstraint(object):
                 potentially defined in lhs
         sign -- comparison sign (<, >, =, <=, >=, or ==)
         rhs  -- value of right-hand side of equality/inequality (float constant)
-        
+
         Sign and rhs are optional, defaults are '<' and 0.
         """
         self.clear()
@@ -70,7 +71,7 @@ class LinearConstraint(object):
             sign = sign[0]
             if sign == '=':
                 self.isEq = True
-    
+
             elif sign == '>':
                 # Flip inequality by negating both signs
                 self.rhs = -self.rhs

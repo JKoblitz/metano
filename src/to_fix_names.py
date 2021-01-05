@@ -7,7 +7,7 @@ which replaces spaces in reaction or metabolite names with underscores.
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -24,10 +24,12 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
-from fba import OptionParser
-from reactionparser import ReactionParser
-from defines import Verbosity, COPYRIGHT_VERSION_STRING
+from metano.fba import OptionParser
+from metano.reactionparser import ReactionParser
+from metano.defines import Verbosity, COPYRIGHT_VERSION_STRING
 import os
 
 
@@ -49,7 +51,7 @@ def main():
 
     if os.path.exists(options.outputFile):
         if os.path.samefile(options.outputFile, options.inputFile):
-            print "Error: Output file must not be the same as input file!"
+            print("Error: Output file must not be the same as input file!")
             exit()
 
     # Call reaction parser for fixing the reaction file
@@ -57,20 +59,20 @@ def main():
     rparser = ReactionParser()
     try:
         rparser.fixfile(options.inputFile, options.outputFile)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s or write file "
                "%s:" % (os.path.normpath(options.inputFile),
                         os.path.normpath(options.outputFile)))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("Error in reaction file %s:" %
                os.path.normpath(options.inputFile))
-        print strerror
+        print(strerror)
         exit()
 
     # Print warning and info messages
-    print '\n'.join(rparser.getMessages(Verbosity.ALL))
+    print('\n'.join(rparser.getMessages(Verbosity.ALL)))
 
 
 if __name__ == "__main__":

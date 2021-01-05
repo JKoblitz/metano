@@ -3,7 +3,7 @@ This module defines a number of objective functions for nonlinear optimization.
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -20,7 +20,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import division
 
+from builtins import range
+from past.utils import old_div
 from numpy import dot
 
 CUTOFF = 1E-20
@@ -34,7 +37,7 @@ def biomass_per_flux(flux_vec, biomass_index):
     if denominator < CUTOFF:
         return 0.   # Punish all-zero flux (in this case, the biomass flux is
                     # very low as well)
-    return flux_vec[biomass_index]/denominator
+    return old_div(flux_vec[biomass_index],denominator)
 
 
 def neg_grad_biomass_per_flux(flux_vec, biomass_index):

@@ -3,7 +3,7 @@ This module defines a number of global constants and helper functions.
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -20,11 +20,15 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import print_function
 
-METANO_VERSION = "1.0.1.2"
+from builtins import map
+from builtins import range
+from builtins import object
+METANO_VERSION = "1.3.0"
 
 COPYRIGHT_VERSION_STRING = ("metano v" + METANO_VERSION + "\n"
-                            "Copyright (C) 2010-2014 Alexander Riemer,\n"
+                            "Copyright (C) 2010-2019 Julia Helmecke, Alexander Riemer,\n"
                             "Braunschweig University of Technology,\n"
                             "Dept. of Bioinformatics & Biochemistry.\n\n"
                             "This program comes with ABSOLUTELY NO WARRANTY.\n"
@@ -35,7 +39,7 @@ COPYRIGHT_VERSION_STRING = ("metano v" + METANO_VERSION + "\n"
 
 from numpy import isinf
 
-class Verbosity:
+class Verbosity(object):
     """ Levels of verbosity
     """
     NONE           = 0
@@ -45,7 +49,7 @@ class Verbosity:
     DEBUG          = 4
     ALL            = 4
 
-class When:
+class When(object):
     """ Constants for when to perform an action
     """
     NEVER          = 0
@@ -67,7 +71,7 @@ def decodeWhen(whenStr, allowedOptions=When.ANY):
     return when
 
 
-class SolverStatus:
+class SolverStatus(object):
     """ Status of optimization
     """
     PREPARED       = -1
@@ -137,7 +141,7 @@ def glpkToSolverStatus(status):
         return SolverStatus.UNKNOWN
 
 
-class ReaFileStruc:
+class ReaFileStruc(object):
     """ Definitions for structure (syntax & some semantics) of reaction file
     """
     delimiter   = ":"    # delimiter separating reaction name and equation
@@ -244,13 +248,13 @@ def printHistogram(histogram, minval, maxval, revert=False):
     if revert:
         # Print histogram negated and in reverse order
         for i in range(numBins):
-            print ("%.12g" % (minval + float(i)*binWidth)).ljust(16),
-            print -histogram[-i-1]
+            print(("%.12g" % (minval + float(i)*binWidth)).ljust(16), end=' ')
+            print(-histogram[-i-1])
     else:
         for i in range(numBins):
-            print ("%.12g" % (minval + float(i)*binWidth)).ljust(16),
-            print histogram[i]
-    print ("%.12g" % maxval).ljust(16)
+            print(("%.12g" % (minval + float(i)*binWidth)).ljust(16), end=' ')
+            print(histogram[i])
+    print(("%.12g" % maxval).ljust(16))
 
 
 def exportMatrixAsDotM(matrix, filename):

@@ -9,7 +9,7 @@ reactions.
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -26,12 +26,14 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
-from fba import OptionParser
-from reactionparser import ReactionParser
-from metabolicmodel import MetabolicModel
-from metabolicflux import MetabolicFlux
-from defines import COPYRIGHT_VERSION_STRING
+from metano.fba import OptionParser
+from metano.reactionparser import ReactionParser
+from metano.metabolicmodel import MetabolicModel
+from metano.metabolicflux import MetabolicFlux
+from metano.defines import COPYRIGHT_VERSION_STRING
 import os
 
 
@@ -60,15 +62,15 @@ def main():
     model = MetabolicModel()
     try:
         model.addReactionsFromFile(options.reactionFile, rparser)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(options.reactionFile))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("Error in reaction file %s:" %
                os.path.basename(options.reactionFile))
-        print strerror
+        print(strerror)
         exit()
 
     # 3. Parse solution file
@@ -76,15 +78,15 @@ def main():
     solution = MetabolicFlux()
     try:
         solution.readFromFile(options.solutionFile)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(options.solutionFile))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("Error in solution file %s:" %
                os.path.basename(options.solutionFile))
-        print strerror
+        print(strerror)
         exit()
 
     # 4. Count metabolites' participation in active reactions
@@ -97,18 +99,18 @@ def main():
     # Show warning and info messages (if any)
     msgs = rparser.getMessages() + [x[1] for x in model_messages]
     if msgs:
-        print '\n'.join(msgs)+'\n'
+        print('\n'.join(msgs)+'\n')
 
     # 5. Output results
 
-    print "Active metabolites:\n"
+    print("Active metabolites:\n")
     for met in sorted(metabolitesSolution, key=metabolitesSolution.get,
                       reverse=True):
-        print met, metabolitesSolution[met]
+        print(met, metabolitesSolution[met])
 
-    print "\nActive reactions:\n"
+    print("\nActive reactions:\n")
     for reactionName in activeReactions:
-        print reactionName
+        print(reactionName)
 
     print ("\n%u metabolites in %u active reactions." %
            (len(metabolitesSolution), len(activeReactions)))

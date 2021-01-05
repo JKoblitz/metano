@@ -15,7 +15,7 @@ Gibbs free energy change of each reaction.
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -34,19 +34,24 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
-import csv, re, os
+import csv
+import re
+import os
 from sys import stdout
 from collections import defaultdict
 from math import log
-from defines import COPYRIGHT_VERSION_STRING
-from fba import OptionParser
-from reactionparser import ReactionParser
-from metabolicmodel import MetabolicModel
+from metano.defines import COPYRIGHT_VERSION_STRING
+from metano.fba import OptionParser
+from metano.reactionparser import ReactionParser
+from metano.metabolicmodel import MetabolicModel
 
 
 R = 8.314472           # J mol-1 K-1, universal gas constant
 KelvinOffset = 273.15  # offset for conversion from Celsius to Kelvin
+
 
 def _replaceChars(s):
     return re.sub(" |:", "_", s)
@@ -65,7 +70,7 @@ def getReaEnthalpies(concentrationFile, thermodynFile, synonymFile,
         synonyms = {}
         for row in synonymReader:
             preferredName = _replaceChars(row[synonymReader.fieldnames[0]])
-            synonyms[preferredName]=preferredName
+            synonyms[preferredName] = preferredName
             synonyms[_replaceChars(row[synonymReader.fieldnames[1]])] =\
                 preferredName
             brendaSyn = row[synonymReader.fieldnames[3]]
@@ -85,14 +90,14 @@ def getReaEnthalpies(concentrationFile, thermodynFile, synonymFile,
     with open(concentrationFile) as f:
         concentrationReader = csv.DictReader(f, delimiter=';')
 
-        concentrations={}
+        concentrations = {}
         for row in concentrationReader:
 
             name = _replaceChars(row[concentrationReader.fieldnames[1]])
             name = synonyms.get(name, name)
 
-            concentrations[name]=(float(row[concentrationReader.fieldnames[2]]),
-                               float(row[concentrationReader.fieldnames[3]]))
+            concentrations[name] = (float(row[concentrationReader.fieldnames[2]]),
+                                    float(row[concentrationReader.fieldnames[3]]))
 
     # Read thermodynamic data from file into a
     # dict {metabolite : list of 4-tuples}
@@ -115,15 +120,15 @@ def getReaEnthalpies(concentrationFile, thermodynFile, synonymFile,
     model = MetabolicModel()
     try:
         model.addReactionsFromFile(reactionFile, rparser)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(reactionFile))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("Error in reaction file %s:" %
                os.path.basename(reactionFile))
-        print strerror
+        print(strerror)
         exit()
 
     temperatureKelvin = temperatureCelsius + KelvinOffset
@@ -165,6 +170,7 @@ def readReaEnthalpiesFromFile(filename):
     with open(filename) as f:
         return readReaEnthalpiesFromFileHandle(f)
 
+
 def readReaEnthalpiesFromFileHandle(f):
     result = {}
     line_no = 0
@@ -185,7 +191,7 @@ def writeOutputToFileHandle(f, solution):
     maxlen = len(max(solution, key=len))
     maxlen = max(maxlen, len("REACTION"))
     # Write table head
-    f.write("REACTION".ljust(maxlen)+" "+"MIN_DELTA_G".rjust(12)+" "+
+    f.write("REACTION".ljust(maxlen)+" "+"MIN_DELTA_G".rjust(12)+" " +
             "MAX_DELTA_G".rjust(12)+"\n")
     # Write Gibbs free energy bounds for each reaction
     for rea in sorted(solution):
@@ -243,10 +249,10 @@ def main():
         try:
             with open(options.outputFile, 'w') as f:
                 writeOutputToFileHandle(f, gibbsR)
-        except IOError, strerror:
+        except IOError as strerror:
             print ("Unable to write to file %s:" %
                    os.path.basename(options.outputFile))
-            print strerror
+            print(strerror)
             writeOutputToFileHandle(stdout, gibbsR)
     else:
         writeOutputToFileHandle(stdout, gibbsR)

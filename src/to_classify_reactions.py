@@ -2,7 +2,7 @@
 """
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -19,12 +19,15 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
-from fba import OptionParser
-from metabolicmodel import MetabolicModel
-from defines import COPYRIGHT_VERSION_STRING
+from metano.fba import OptionParser
+from metano.metabolicmodel import MetabolicModel
+from metano.defines import COPYRIGHT_VERSION_STRING
 import os
 import sys
+
 
 def main():
 
@@ -40,7 +43,7 @@ def main():
     options, args = parser.parse_args()
 
     if len(args) < 1:
-        print "Error: No filename given."
+        print("Error: No filename given.")
         print ("Usage is\n    " + os.path.basename(sys.argv[0]) + " <filename> "
                "[options]")
         exit()
@@ -52,24 +55,24 @@ def main():
     model = MetabolicModel()
     try:
         model.addReactionsFromFile(filename)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(filename))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("Error in reaction file %s:" %
                os.path.basename(filename))
-        print strerror
+        print(strerror)
         exit()
 
     # 3. Identify exchange reactions
 
     exchangeReactions = [reaction for reaction in model if len(reaction) == 1]
     nExchange = len(exchangeReactions)
-    print "Exchange reactions:", nExchange
-    print "\n".join([r.name for r in exchangeReactions
-                     if "exchange" not in r.name])
+    print("Exchange reactions:", nExchange)
+    print("\n".join([r.name for r in exchangeReactions
+                     if "exchange" not in r.name]))
 
     # 4. Identify transport reactions
 

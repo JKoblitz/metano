@@ -2,7 +2,7 @@
 """ Script for listing all metabolite names
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -20,29 +20,31 @@ You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
-from metabolicmodel import MetabolicModel
+from metano.metabolicmodel import MetabolicModel
 import sys
 import os
 
 try:
     filename = sys.argv[1]
 except IndexError:
-    print "Error: No filename given."
-    print "Usage is\n    " + os.path.basename(sys.argv[0]), "<reaction file>"
+    print("Error: No filename given.")
+    print("Usage is\n    " + os.path.basename(sys.argv[0]), "<reaction file>")
     exit()
 
 model = MetabolicModel()
 try:
     model.addReactionsFromFile(filename)
-except IOError, strerror:
+except IOError as strerror:
     print ("An error occurred while trying to read file %s:" %
            os.path.basename(filename))
-    print strerror
+    print(strerror)
     exit()
-except SyntaxError, strerror:
+except SyntaxError as strerror:
     print ("Error in reaction file %s:" %
            os.path.basename(filename))
-    print strerror
+    print(strerror)
     exit()
-print "\n".join(sorted(model.getMetaboliteNames()))
+print("\n".join(sorted(model.getMetaboliteNames())))

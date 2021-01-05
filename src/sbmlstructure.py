@@ -3,7 +3,7 @@ This module defines constants for structural elements of SBML files.
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -23,6 +23,7 @@ You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+from builtins import object
 class SbmlDef(object):
     """ Class for SBML structure elements
         (with extensions for flux balance models)
@@ -45,7 +46,7 @@ class SbmlDef(object):
     LISTOFCOMPARTMENTS = "listOfCompartments"
     LISTOFSPECIES = "listOfSpecies"
     LISTOFREACTIONS = "listOfReactions"
-    
+
     # listOfUnitDefinitions
     UNITDEFINITION = "unitDefinition"
     LISTOFUNITS = "listOfUnits"
@@ -63,7 +64,7 @@ class SbmlDef(object):
     SPECIES = "species"
     # "charge" is ignored (and obsolete)
     BOUNDARYCONDITION = "boundaryCondition"
-    CONSTANT = "constant"  # can also appear as attribute of speciesReference
+    CONSTANT = "constant"  # can also appear as attribute of speciesReference and compartment
     HASONLYSUBSTANCEUNITS = "hasOnlySubstanceUnits"
 
     # listOfReactions
@@ -76,14 +77,14 @@ class SbmlDef(object):
     MATH = "math"
     CI = "ci"
     CN = "cn"
-    LISTOFPARAMETERS = "listOfParameters"
+    LISTOFPARAMETERS = "listOfLocalParameters"
 
     # listOfReactants / listOfProducts
     SPECIESREFERENCE = "speciesReference"
     STOICHIOMETRY = "stoichiometry"
 
     # listOfParameters
-    PARAMETER = "parameter"
+    PARAMETER = "localParameter"
     VALUE = "value"
     UNITS = "units"
     # Extensions for flux balance models

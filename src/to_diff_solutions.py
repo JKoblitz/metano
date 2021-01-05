@@ -16,7 +16,7 @@ the fluxes differ by less than cutoff are omitted.
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -33,10 +33,16 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
 
-from fba import OptionParser
-from metabolicflux import MetabolicFlux
-from defines import COPYRIGHT_VERSION_STRING
+from builtins import map
+from builtins import range
+from past.utils import old_div
+from metano.fba import OptionParser
+from metano.metabolicflux import MetabolicFlux
+from metano.defines import COPYRIGHT_VERSION_STRING
 import os
 import sys
 
@@ -50,14 +56,14 @@ def main():
     parser.add_option("-o", "--output", dest="outputFile", help="output FILE "
                       "(output is written to console if this is missing)",
                       metavar="FILE")
-    parser.add_option("-c", "--cutoff", dest="cutoff", help ="Cutoff below which"
+    parser.add_option("-c", "--cutoff", dest="cutoff", help="Cutoff below which"
                       " difference is considered zero; default is 1E-10")
     parser.set_defaults(cutoff="1E-10")
 
     options, args = parser.parse_args()
 
     if len(args) < 2:
-        print "Error: Need two solution files."
+        print("Error: Need two solution files.")
         print ("Usage is\n    " + os.path.basename(sys.argv[0]) + " <file1> "
                "<file2> [options]")
         exit()
@@ -65,14 +71,14 @@ def main():
     try:
         cutoff = float(options.cutoff)
     except ValueError:
-        print "Error: Invalid floating point value for cutoff."
+        print("Error: Invalid floating point value for cutoff.")
         exit()
     if cutoff < 0.:
         print ("Warning: Cutoff is less than zero. Setting cutoff to zero, "
                "i.e. no cutoff.")
         cutoff = 0.
 
-    basename = map(os.path.basename, args)
+    basename = list(map(os.path.basename, args))
     # Use full path for identifying files if basenames are identical
     if basename[0] == basename[1]:
         basename = args
@@ -84,14 +90,14 @@ def main():
         # Get pair of MetabolicFlux objects
         try:
             solution[i].readFromFile(args[i])
-        except IOError, strerror:
+        except IOError as strerror:
             print ("An error occurred while trying to read file %s:" %
                    os.path.basename(basename[i]))
-            print strerror
+            print(strerror)
             exit()
-        except SyntaxError, strerror:
-            print "An error occurred parsing file %s:" % basename[i]
-            print strerror
+        except SyntaxError as strerror:
+            print("An error occurred parsing file %s:" % basename[i])
+            print(strerror)
             exit()
 
     diffSolution = solution[0].absDiff(solution[1])
@@ -100,34 +106,34 @@ def main():
 
     nReactions = len(diffSolution)
     if nReactions == 0:
-        exit() # Nothing to do
+        exit()  # Nothing to do
     if len(diffSolution) == len(solution[0]) == len(solution[1]):
-        print "Both solutions have the same %u reactions." % nReactions
+        print("Both solutions have the same %u reactions." % nReactions)
     else:
-        n = map(len, solution)
+        n = list(map(len, solution))
         print ("The two solutions have %u reactions in common.\n(%s: %u, "
                "%s: %u)" % (n[0]+n[1]-nReactions, basename[0], n[0],
                             basename[1], n[1]))
 
     sumDiff = sum(diffSolution.fluxDict.values())
-    sumSqDiff = sum(x*x for x in diffSolution.fluxDict.values())
-    print "Summed absolute difference: %s (mean: %s)" % (sumDiff,
-                                                         sumDiff/nReactions)
-    print "Summed squared difference: %s (mean: %s)" % (sumSqDiff,
-                                                        sumSqDiff/nReactions)
+    sumSqDiff = sum(x*x for x in list(diffSolution.fluxDict.values()))
+    print("Summed absolute difference: %s (mean: %s)" % (sumDiff,
+                                                         old_div(sumDiff, nReactions)))
+    print("Summed squared difference: %s (mean: %s)" % (sumSqDiff,
+                                                        old_div(sumSqDiff, nReactions)))
 
     try:
         if options.outputFile is None:
-            print
+            print()
             written = write_output(sys.stdout, diffSolution, solution, basename,
                                    cutoff, False)
         else:
             with open(options.outputFile, 'w') as f:
                 written = write_output(f, diffSolution, solution, basename,
                                        cutoff, True)
-    except IOError, strerror:
-        print "An error occurred while trying to write output:"
-        print strerror
+    except IOError as strerror:
+        print("An error occurred while trying to write output:")
+        print(strerror)
         exit()
 
     if not written:
@@ -158,7 +164,7 @@ def write_output(file_obj, diffSolution, solution, filenames, cutoff, showOrig):
     """
 
     # Get length of longest reaction name and length of filenames for formatting
-    maxlen = len(max(diffSolution.fluxDict.keys(), key=len))
+    maxlen = len(max(list(diffSolution.fluxDict.keys()), key=len))
     len0 = max(len(filenames[0]), 12)
     len1 = max(len(filenames[1]), 12)
 
@@ -173,7 +179,7 @@ def write_output(file_obj, diffSolution, solution, filenames, cutoff, showOrig):
         if first:
             s = "REACTION".ljust(maxlen)+"DIFFERENCE".rjust(12)
             if showOrig:
-                s += ('  '+filenames[0].rjust(len0)+'  '+
+                s += ('  '+filenames[0].rjust(len0)+'  ' +
                       filenames[1].rjust(len1))
             file_obj.write(s+'\n')
             first = False

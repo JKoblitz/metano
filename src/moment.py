@@ -1,17 +1,17 @@
 #!/usr/bin/env/python
 
-""" MOMENT: Modular Metabolic Engineering Tool 
+""" MOMENT: Modular Metabolic Engineering Tool
 
 This script provides a modular metabolic engineering approach
-using MOMA analysis. It iterates through a set of given reactions 
+using MOMA analysis. It iterates through a set of given reactions
 and choose the best one for product yield enhancement based on
-MOMA flux calculation. Afterwards the reaction is added to the 
+MOMA flux calculation. Afterwards the reaction is added to the
 set of optimal reactions and the calculation goes on.
 
 Runtime for a set of seven reactions: ~7 hours
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -29,7 +29,14 @@ You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 
 """
+from __future__ import print_function
+from __future__ import division
 
+from builtins import input
+from builtins import zip
+from builtins import str
+from builtins import object
+from past.utils import old_div
 from metano.metabolicmodel import MetabolicModel
 from metano.paramparser import ParamParser
 from metano.defines import FbaParam
@@ -43,7 +50,7 @@ import os, time, glob, optparse, sys, json, errno
 
 version_number = "alpha_1.3"
 
-# ============================ SETTING PARAMETERS =============================== # 
+# ============================ SETTING PARAMETERS =============================== #
 
 def unwrap_self_metabolic_engineering(arg, **kwarg):
     return runMoment.metabolic_engineering(*arg, **kwarg)
@@ -57,17 +64,17 @@ class OptionParser(optparse.OptionParser):
             self.error("%s option not supplied" % option)
             sys.exit()
 
- 
 
 
-class runMoment():
-    
+
+class runMoment(object):
+
     beginTime = time.time()
 
-    def __init__(self, reactionFile, scenarioFile, outputFile, config, debugging=False): 
+    def __init__(self, reactionFile, scenarioFile, outputFile, config, debugging=False):
         """
         initialize all required values for MOMENT
-        """  
+        """
         self.config = config
        # define the path to the reaction file:
         self.reactionFile = reactionFile
@@ -88,9 +95,9 @@ class runMoment():
         #self.numberNextTurnReactions = config["numberNextTurnReactions"]
         # define the flux to be optimized and the wild type target flux:
         self.optimizationFlux = config["targetFlux"]
-        # 
+        #
         self.transporterPrefix = config["transporterPrefix"]
-        # 
+        #
         self.ignoreReactionPrefix = config["ignoreReactionPrefix"]
         self.treshold = config["minDiffTreshold"]
         # Set of reactions that are set as already optimized:
@@ -98,7 +105,7 @@ class runMoment():
 
         self.wtFbaFlux = self.Fba_solution(self.scenarioFile)
 
-        
+
         # clear all previous parameters and result files and create if not exist:
         try:
             os.makedirs(self.resultFolder)
@@ -162,9 +169,9 @@ class runMoment():
                 self.setOfCandidates.append(str(item.split(":")[0].strip()))
                 self.reactionsDct[str(item.split(":")[0].strip())] = float(item.split(":")[-1].strip())
         else:
-        # 1. perform FBA with optimizationFlux: 
+        # 1. perform FBA with optimizationFlux:
             subst =  "OBJ MAX " + self.optimizationFlux + " \n"
-            
+
             # edit scenario file and write changes to new file:
             with open("sce.txt") as cfg:
                 for line in cfg:
@@ -179,7 +186,7 @@ class runMoment():
 
             # 2. compare targetFBA with WT FBA:
             comparisonDict = {}
-            for rea in self.wtFbaFlux: 
+            for rea in self.wtFbaFlux:
                 a = self.optFbaFlux[rea]
                 b = self.wtFbaFlux[rea]
                 diff = max(a, b) - min(a, b)
@@ -202,9 +209,9 @@ class runMoment():
             # check how many candidate reactions were calculated and
             # give the possibility to abort and adjust treshold
             if len(comparisonDict) > 30 or len(comparisonDict) < 5:
-                print """WARNING!! %d candidate reactions were calculated !\n
-                Try to adjust the treshold in the config file!""" % len(comparisonDict)
-                answer = raw_input("Do you want to continue? (y/n)\n")
+                print("""WARNING!! %d candidate reactions were calculated !\n
+                Try to adjust the treshold in the config file!""" % len(comparisonDict))
+                answer = input("Do you want to continue? (y/n)\n")
                 if answer == "n":
                     exit()
 
@@ -214,10 +221,10 @@ class runMoment():
                 self.reactionsDct[rea] = float(self.optFbaFlux[rea])
 
         for element in self.setOfInterventions:
-            self.setOfCandidates.remove(element) 
-        print "Candidate Reactions:", self.setOfCandidates
+            self.setOfCandidates.remove(element)
+        print("Candidate Reactions:", self.setOfCandidates)
 
-          
+
 
     def metabolic_engineering(self,argument):
         """
@@ -226,7 +233,7 @@ class runMoment():
         """
         new_rea, setOfInterventions_list = argument
         name = str(len(setOfInterventions_list)) + "_" + new_rea
-        
+
         if new_rea == []:
             pass
         else:
@@ -237,7 +244,7 @@ class runMoment():
             for element in setOfInterventions_list:
                 subst += "LB " + element + " " + str(self.reactionsDct[element]) + " \n"
                 subst += "UB " + element + " " + str(self.reactionsDct[element]) + " \n"
-            
+
             # write changes to scenario file:
             cfg = open("insce/insce_" + name + ".txt", "w")
             cfg.write(self.insce + "\n\n")
@@ -258,27 +265,27 @@ class runMoment():
             scenarioModel.setFiniteBounds(lb, ub, False)
 
             #save flux distribution of WT FBA into variable for usage during MOMA analysis:
-            
+
 
             # during debugging, only FBA is performed:
             if self.debugging == True:
                 solutionFlux = self.Fba_solution("sce.txt")
             else:
-                # perform MOMA analysis and save the resulting flux 
+                # perform MOMA analysis and save the resulting flux
                 # distribution in "solutionFlux":
                 moma = MomaAnalyzer("default")
-                dist, solutionFlux, status = moma.runOnModel(scenarioModel, 
+                dist, solutionFlux, status = moma.runOnModel(scenarioModel,
                     self.wtFbaFlux, fbaParams.linConstraints, numIter)[:3]
-            
+
 
             # save the flux through optimization flux
             try:
                 targetFlux = solutionFlux.fluxDict[self.optimizationFlux]
             except:
                 targetFlux = 0
-                print "Warning:", self.optimizationFlux, "could not be found!"
-                
-            # write result to file. This step is necessary when 
+                print("Warning:", self.optimizationFlux, "could not be found!")
+
+            # write result to file. This step is necessary when
             # using multiprocessing. In this way the cores dont
             # get in each others way:
             maxFluxFile = open(self.resultFolder + name + ".txt", "w")
@@ -291,7 +298,7 @@ class runMoment():
 
 
     def moment(self):
-        
+
         # create empty output file:
         maxkey_output = ""
         text_file = open(self.outputFile, "w")
@@ -308,18 +315,18 @@ class runMoment():
             modify = []
             for entry in self.setOfCandidates:
                 modify.append((entry, self.setOfInterventions))
-            
+
             if self.debugging == True:
                 pool=Pool(processes=1)
-            pool.map(unwrap_self_metabolic_engineering, zip([self]*len(modify), modify))
+            pool.map(unwrap_self_metabolic_engineering, list(zip([self]*len(modify), modify)))
             #pool.map(self.metabolic_engineering, modify)
             # read out all results from primary files:
-            for element in self.setOfCandidates: 
+            for element in self.setOfCandidates:
                 with open(self.resultFolder + str(len(self.setOfInterventions)) + "_" + element + ".txt") as f:
                     for line in f:
-                        print line
+                        print(line)
                         maxFluxDict[line.split()[0]] = float(line.strip("\n").split()[-1])
-            
+
             # write all results to output file:
             text_file = open(self.outputFile, "a")
             output = ""
@@ -327,35 +334,35 @@ class runMoment():
                 output += str(len(self.setOfInterventions)) + ";" + key + ";" + str(maxFluxDict[key]) + "\n"
             text_file.write(output)
             text_file.close()
-            print output
-            
+            print(output)
+
             # save the best result into self.setOfInterventions list and delete from new_rea:
-            print max(maxFluxDict, key=maxFluxDict.get)
+            print(max(maxFluxDict, key=maxFluxDict.get))
             maxkey = max(maxFluxDict, key=maxFluxDict.get)
-            print "***   ", maxkey, "=", maxFluxDict[maxkey], "   ***\n\n\n"
+            print("***   ", maxkey, "=", maxFluxDict[maxkey], "   ***\n\n\n")
             self.setOfInterventions.append(maxkey)
             self.setOfCandidates.remove(maxkey)
             maxkey_output += maxkey + "; " + str(maxFluxDict[maxkey]) + "\n"
-            
-            print "Runtime for", len(self.setOfInterventions), "reaction(s):\n", \
-                  round((time.time() - self.beginTime)/60, 2), "minutes\n"
+
+            print("Runtime for", len(self.setOfInterventions), "reaction(s):\n", \
+                  round(old_div((time.time() - self.beginTime),60), 2), "minutes\n")
 
 
         # finally write the set of best reactions to output file:
         text_file = open(self.maxkeyOutputFile, "w")
         text_file.write(maxkey_output)
         text_file.close()
-        print "\n\nMAXKEY OUTPUT:\n", maxkey_output
+        print("\n\nMAXKEY OUTPUT:\n", maxkey_output)
 
-        print "RUNTIME:\n", \
+        print("RUNTIME:\n", \
               round(time.time() - self.beginTime, 2), "seconds\n", \
-              round((time.time() - self.beginTime)/60, 2), "minutes\n", \
-              round((time.time() - self.beginTime)/60/60, 2), "hours\n"
+              round(old_div((time.time() - self.beginTime),60), 2), "minutes\n", \
+              round(old_div((time.time() - self.beginTime),60/60), 2), "hours\n")
 
 
 def main():
     usage = "Usage: %prog [options]"
-    version = "Modular Metabolic Engineering Test \nVersion %s" % version_number 
+    version = "Modular Metabolic Engineering Test \nVersion %s" % version_number
     parser = OptionParser(usage=usage, version=version)
     parser.add_option("-r", "--reactions", dest="reactionFile",
                       help="perform Flux Balance Analysis on the network given "
@@ -385,7 +392,7 @@ def main():
 
     with open(options.configFile) as cf:
         cfDict = json.load(cf)
-    
+
     myMoment = runMoment(options.reactionFile,
         options.scenarioFile,
         options.outputFile,
@@ -393,8 +400,8 @@ def main():
         options.debugging)
 
     myMoment.identify_candidates()
-    myMoment.moment() 
-    
+    myMoment.moment()
+
 if __name__ == "__main__":
     main()
 

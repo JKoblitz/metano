@@ -8,7 +8,7 @@ acetone import + glucose import as auxiliary transporter.
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -25,13 +25,17 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
-from defines import FbaParam, COPYRIGHT_VERSION_STRING
-from reactionparser import ReactionParser
-from paramparser import ParamParser
-from metabolicmodel import MetabolicModel
-from transporterparser import TransporterParser
-from fba import OptionParser, FbAnalyzer
+from builtins import map
+from builtins import range
+from metano.defines import FbaParam, COPYRIGHT_VERSION_STRING
+from metano.reactionparser import ReactionParser
+from metano.paramparser import ParamParser
+from metano.metabolicmodel import MetabolicModel
+from metano.transporterparser import TransporterParser
+from metano.fba import OptionParser, FbAnalyzer
 from numpy import array, inf
 import os
 
@@ -73,7 +77,7 @@ def checkRecursive(resultList, currentList, otherLists, fba, matrix, reactions,
         solutionSplit = fba.run(reactionsSplit, matrixSplit, lbSplit, ubSplit,
                                 fbaParams)[1]
 
-        keys = partialResult.keys()
+        keys = list(partialResult.keys())
         if solutionSplit == []:
             solution = []
             for key in keys:
@@ -165,7 +169,7 @@ def checkRecursive(resultList, currentList, otherLists, fba, matrix, reactions,
                 tmp_lb_trans = lb[index]
                 tmp_ub_trans = ub[index]
                 lb[index] = -inf
-                ub[index] =  inf
+                ub[index] = inf
 
                 # First perform FBA without cotransporter
                 checkRecursive(resultList, nextList, otherLists[1:], fba,
@@ -181,7 +185,7 @@ def checkRecursive(resultList, currentList, otherLists, fba, matrix, reactions,
                     tmp_lb_cotrans = lb[co_index]
                     tmp_ub_cotrans = ub[co_index]
                     lb[co_index] = -inf
-                    ub[co_index] =  inf
+                    ub[co_index] = inf
 
                     checkRecursive(resultList, nextList, otherLists[1:], fba,
                                    matrix, reactions, reaction_names, lb, ub,
@@ -224,15 +228,15 @@ def main():
     model = MetabolicModel()
     try:
         model.addReactionsFromFile(options.reactionFile, rparser)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(options.reactionFile))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("Error in reaction file %s:" %
                os.path.basename(options.reactionFile))
-        print strerror
+        print(strerror)
         exit()
     reactions = model.reactionDict
     matrix = array(model.getStoichiometricMatrix())
@@ -243,31 +247,31 @@ def main():
     pparser = ParamParser()
     try:
         # Parse file, get maxmin, name of objective function, and solver name
-        maxmin, obj_name, solver, numIter, lb , ub = pparser.parse(
-                                                        options.paramFile)
+        maxmin, obj_name, solver, numIter, lb, ub = pparser.parse(
+            options.paramFile)
         fbaParams = FbaParam(solver, maxmin, obj_name, numIter)
         # Set flux bounds in model
         model.setFiniteBounds(lb, ub, True, model_messages)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(options.paramFile))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("Error in scenario file %s:" %
                os.path.basename(options.paramFile))
-        print strerror
+        print(strerror)
         exit()
-    except ValueError, strerror:
-        print strerror
+    except ValueError as strerror:
+        print(strerror)
         exit()
-    lb, ub = map(array, model.getBounds())
+    lb, ub = list(map(array, model.getBounds()))
 
     # Show warning and info messages of parsers
     msgs = (rparser.getMessages() + pparser.getMessages() +
             [x[1] for x in model_messages])
     if msgs:
-        print '\n'+'\n'.join(msgs)
+        print('\n'+'\n'.join(msgs))
 
     # 4. Parse transporter file
 
@@ -275,16 +279,16 @@ def main():
     try:
         transporters = tparser.parse(options.transFile)
         transpByType = tparser.split_by_type()
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(options.transFile))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
-        print strerror
+    except SyntaxError as strerror:
+        print(strerror)
         exit()
-    except ValueError, strerror:
-        print strerror
+    except ValueError as strerror:
+        print(strerror)
         exit()
 
     # 5. Set all transporter fluxes to zero
@@ -337,32 +341,33 @@ def main():
 
     resultList = []
     checkRecursive(resultList, transpByType[main_index],
-        transpByType[:main_index]+transpByType[main_index+1:], fba, matrix,
-        reactions, model.getReactionNames(), lb, ub, fbaParams)
+                   transpByType[:main_index] +
+                   transpByType[main_index+1:], fba, matrix,
+                   reactions, model.getReactionNames(), lb, ub, fbaParams)
 
     # For debugging: Output lb/ub to console
     if debugFlag:
-        keys = resultList[0].keys()
+        keys = list(resultList[0].keys())
         keys.remove("solution")
         keys.remove("bounds")
         keys.sort()
         for result in resultList:
-            print "***",
+            print("***", end=' ')
             for key in keys:
-                print key+":", result[key],
-            print
+                print(key+":", result[key], end=' ')
+            print()
             lbub = result["bounds"]
             for rea in sorted(lbub):
-                print rea, lbub[rea]
+                print(rea, lbub[rea])
 
     # 8. Write output to file
 
     try:
         write_output(options.outputFile, reactions, resultList, main_type)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("Unable to write to file %s:" %
                os.path.basename(options.outputFile))
-        print strerror
+        print(strerror)
         exit()
 
 
@@ -432,7 +437,7 @@ def write_output(filename, reactions, resultList, main_type):
         for i in range(len(resultList)):
             val = resultList[i][key]
             if val == None:
-                s='N/A'
+                s = 'N/A'
             else:
                 s = "% .6g" % val
                 any_cotrans = True
@@ -480,7 +485,7 @@ def write_output(filename, reactions, resultList, main_type):
             for i in range(len(resultList)):
                 val = resultList[i][key]
                 if val == None:
-                    s='N/A'
+                    s = 'N/A'
                 else:
                     s = "% .6g" % val
                     any_cotrans = True

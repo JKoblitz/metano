@@ -9,7 +9,7 @@ to make reactions irreversible.
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -28,15 +28,18 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
-from defines import COPYRIGHT_VERSION_STRING
-from fba import OptionParser
-from optparse import OptionGroup
-from reactionparser import ReactionParser
-from paramparser import ParamParser
-from metabolicmodel import MetabolicModel
-from compute_rea_enthalpies import getReaEnthalpies, readReaEnthalpiesFromFile
+from metano.defines import COPYRIGHT_VERSION_STRING
+from metano.fba import OptionParser
+from metano.optparse import OptionGroup
+from metano.reactionparser import ReactionParser
+from metano.paramparser import ParamParser
+from metano.metabolicmodel import MetabolicModel
+from metano.compute_rea_enthalpies import getReaEnthalpies, readReaEnthalpiesFromFile
 import os
+
 
 def main():
 
@@ -94,13 +97,13 @@ def main():
                options.epsilon)
         exit()
     if (os.path.exists(options.outputFile) and
-        os.path.samefile(options.outputFile, options.paramFile)):
+            os.path.samefile(options.outputFile, options.paramFile)):
         print ("Error: Input and output scenario files are the same (%s)" %
                options.paramFile)
         exit()
 
     if epsilon < 0.:
-        print "Warning: epsilon < 0. Using default value of 0 instead."
+        print("Warning: epsilon < 0. Using default value of 0 instead.")
         epsilon = 0.
 
     if len(args) > 0:
@@ -131,18 +134,18 @@ def main():
         # Parse file
         maxmin, obj_name, solver, numiter, lb, ub =\
             pparser.parse(options.paramFile)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(options.paramFile))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("Error in scenario file %s:" %
                os.path.basename(options.paramFile))
-        print strerror
+        print(strerror)
         exit()
-    except ValueError, strerror:
-        print strerror
+    except ValueError as strerror:
+        print(strerror)
         exit()
 
     if options.reactionFile:
@@ -151,23 +154,23 @@ def main():
         model = MetabolicModel()
         try:
             model.addReactionsFromFile(options.reactionFile, rparser)
-        except IOError, strerror:
+        except IOError as strerror:
             print ("An error occurred while trying to read file %s:" %
                    os.path.basename(options.reactionFile))
-            print strerror
+            print(strerror)
             exit()
-        except SyntaxError, strerror:
+        except SyntaxError as strerror:
             print ("Error in reaction file %s:" %
                    os.path.basename(options.reactionFile))
-            print strerror
+            print(strerror)
             exit()
 
         # Set flux bounds in model
         model_messages = []
         try:
             model.setFiniteBounds(lb, ub, True, model_messages)
-        except ValueError, strerror:
-            print strerror
+        except ValueError as strerror:
+            print(strerror)
             exit()
         reactions = model.getReactionNames()
         # Include implicit flux bounds from reaction file
@@ -176,17 +179,18 @@ def main():
 
         # Show warning and info messages of parsers
         msgs = (rparser.getMessages() + pparser.getMessages() +
-            [x[1] for x in model_messages])
+                [x[1] for x in model_messages])
         if msgs:
-            print '\n'+'\n'.join(msgs)
+            print('\n'+'\n'.join(msgs))
     else:
         print ("Warning: No reaction file given. Implicit bounds defined by "
                "reaction\nreversibilities cannot be taken into account.")
         p_lb, p_ub = lb, ub
-        reactions = sorted(set(gibbsR.keys()+lb.keys()+ub.keys()))
+        reactions = sorted(
+            set(list(gibbsR.keys())+list(lb.keys())+list(ub.keys())))
 
     # Copy optimization parameters
-    param_head = ("OBJ %s %s\nSOLVER %s\n" % ({True:"MAX", False:"MIN"}[maxmin],
+    param_head = ("OBJ %s %s\nSOLVER %s\n" % ({True: "MAX", False: "MIN"}[maxmin],
                                               obj_name, solver))
     if numiter >= 0:
         param_head += "NUM_ITER %u\n" % numiter
@@ -264,10 +268,10 @@ def main():
                         f.write("LB %s %g\n" % (rea, p_lb[rea]))
                     if rea in p_ub:
                         f.write("UB %s %g\n" % (rea, p_ub[rea]))
-    except IOError, strerror:
+    except IOError as strerror:
         print ("Unable to write to file %s:" %
                os.path.basename(options.outputFile))
-        print strerror
+        print(strerror)
         exit()
 
 

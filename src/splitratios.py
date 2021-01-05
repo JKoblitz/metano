@@ -10,7 +10,7 @@ Usage:
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -27,14 +27,18 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
-from fba import OptionParser
-from reactionparser import ReactionParser
-from metabolicmodel import MetabolicModel
-from metabolicflux import MetabolicFlux
-from defines import COPYRIGHT_VERSION_STRING
+from builtins import range
 import os
 import sys
+import csv
+from metano.fba import OptionParser
+from metano.reactionparser import ReactionParser
+from metano.metabolicmodel import MetabolicModel
+from metano.metabolicflux import MetabolicFlux
+from metano.defines import COPYRIGHT_VERSION_STRING
 
 
 def main():
@@ -73,7 +77,7 @@ def main():
     parser.check_required('-r')
 
     if not options.metabolite and not options.outputFile:
-        print "Neither metabolite nor output file given. Nothing to do."
+        print("Neither metabolite nor output file given. Nothing to do.")
         exit()
 
     # 2. Read solution file
@@ -85,15 +89,15 @@ def main():
         print ("Error: No solution file given.\nUsage is\n    " +
                os.path.basename(sys.argv[0]) + " <solution-file> [options]")
         exit()
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(args[0]))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("An error occurred parsing file %s:" %
                os.path.basename(args[0]))
-        print strerror
+        print(strerror)
         exit()
 
     # 3. Parse reaction file
@@ -102,15 +106,15 @@ def main():
     rparser = ReactionParser()
     try:
         model.addReactionsFromFile(options.reactionFile, rparser)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(options.reactionFile))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("Error in reaction file %s:" %
                os.path.basename(options.reactionFile))
-        print strerror
+        print(strerror)
         exit()
 
     # 4. Compute split ratios
@@ -118,14 +122,14 @@ def main():
     if options.outputFile:
         # Compute split ratios for all metabolites
         splitRatios = solution.computeAllSplitRatios(model, options.cutoff,
-                        options.cutoffIsAbsolute, options.listAll)
+                                                     options.cutoffIsAbsolute, options.listAll)
         try:
             writeSplitRatiosToFile(options.outputFile, splitRatios,
                                    options.threshold, options.omitUnbranched)
-        except IOError, strerror:
+        except IOError as strerror:
             print ("Unable to write to file %s:" %
                    os.path.basename(options.outputFile))
-            print strerror
+            print(strerror)
 
         # Print statistics
         nMetabolites = len(splitRatios)
@@ -153,8 +157,9 @@ def main():
                     nOne += 1
                 elif options.listAll:
                     # Actually count all outgoing and incoming fluxes > 0
-                    nOut = sum(1 for rea in outRatios if outRatios[rea][1] > 0.)
-                    nIn  = sum(1 for rea in inRatios if inRatios[rea][1] > 0.)
+                    nOut = sum(
+                        1 for rea in outRatios if outRatios[rea][1] > 0.)
+                    nIn = sum(1 for rea in inRatios if inRatios[rea][1] > 0.)
                     if nOut == nIn == 1:
                         nOne += 1
                 if sum(outRatios[rea][1] for rea in outRatios) < EPSILON:
@@ -181,7 +186,7 @@ def main():
                     EPSILON))
         print ("%u metabolites (%.2g%%) lie on an unbranched path." %
                (nOne, ((float(nOne)/float(nMetabolites))*100.)))
-        print
+        print()
 
         # Extract data for queried metabolite
         if options.metabolite:
@@ -195,21 +200,21 @@ def main():
     elif options.metabolite:
         # Only compute split ratios for the given metabolite
         outRatios, inRatios = solution.computeSplitRatios(options.metabolite,
-            model, options.cutoff, options.cutoffIsAbsolute, options.listAll)
+                                                          model, options.cutoff, options.cutoffIsAbsolute, options.listAll)
 
     if options.metabolite:
-        print "Split ratios for %r" % options.metabolite
+        print("Split ratios for %r" % options.metabolite)
         maxlen = max(len(max(outRatios, key=len)), len(max(inRatios, key=len)))
         fluxSum = sum(outRatios[rea][1] for rea in outRatios)
-        print "- outgoing (sum %g) -" % fluxSum
-        for rea in sorted(outRatios, key=lambda x : outRatios[x][0],
+        print("- outgoing (sum %g) -" % fluxSum)
+        for rea in sorted(outRatios, key=lambda x: outRatios[x][0],
                           reverse=True):
             ratio, flux = outRatios[rea]
             print (rea.ljust(maxlen) + " " + ("%.4g%%" % (ratio*100.)).rjust(10)
                    + " " + ("%.6g" % flux).rjust(12))
         fluxSum = sum(inRatios[rea][1] for rea in inRatios)
-        print "- incoming (sum %g) -" % fluxSum
-        for rea in sorted(inRatios, key=lambda x : inRatios[x][0],
+        print("- incoming (sum %g) -" % fluxSum)
+        for rea in sorted(inRatios, key=lambda x: inRatios[x][0],
                           reverse=True):
             ratio, flux = inRatios[rea]
             print (rea.ljust(maxlen) + " " + ("%.4g%%" % (ratio*100.)).rjust(10)
@@ -218,8 +223,43 @@ def main():
 
 def writeSplitRatiosToFile(filename, splitRatios, threshold, omitUnbranched):
     with open(filename, 'w') as f:
-        return writeSplitRatiosToFileHandle(f, splitRatios, threshold,
-                                            omitUnbranched)
+        if filename.split(".")[-1] == "csv":
+            writeSplitRatiosToCSVHandle(f, splitRatios, threshold,
+                                        omitUnbranched)
+        else:
+            writeSplitRatiosToFileHandle(f, splitRatios, threshold,
+                                         omitUnbranched)
+
+
+def writeSplitRatiosToCSVHandle(f, splitRatios, threshold, omitUnbranched):
+    # sorted[Out/In]Keys stores the sorted keys for the outRatios or inRatios
+    #  dict of each metabolite (in descending order of flux)
+    sortedOutKeys, sortedInKeys = {}, {}
+    # maxwidth stores maximum width of each column
+    metaboliteList = sorted(splitRatios)
+    csvwriter = csv.writer(f, delimiter=";", quotechar='"',
+                           quoting=csv.QUOTE_MINIMAL)
+    # Write Header to CSV file
+    csvwriter.writerow(["NAME", "DIRECTION", "REACTION", "PERCENT", "FLUX"])
+
+    for met in sorted(metaboliteList):
+        outRatios, inRatios = splitRatios[met]
+
+        if omitUnbranched and len(outRatios) <= 1 and len(inRatios) <= 1:
+            # Omit metabolite in output if it has an unbranched flux
+            continue
+
+        if not outRatios:
+            csvwriter.writerow([met, "outgoing", "", 0, 0])
+        if not inRatios:
+            csvwriter.writerow([met, "incoming", "", 0, 0])
+        for o in sorted(outRatios, key=outRatios.get, reverse=True):
+            csvwriter.writerow(
+                [met, "outgoing", o, outRatios[o][0], outRatios[o][1]])
+        for i in sorted(inRatios, key=inRatios.get, reverse=True):
+            csvwriter.writerow(
+                [met, "incoming", i, inRatios[i][0], inRatios[i][1]])
+
 
 def writeSplitRatiosToFileHandle(f, splitRatios, threshold, omitUnbranched):
     # sorted[Out/In]Keys stores the sorted keys for the outRatios or inRatios
@@ -231,9 +271,9 @@ def writeSplitRatiosToFileHandle(f, splitRatios, threshold, omitUnbranched):
 
     for met in metaboliteList:
         outRatios, inRatios = splitRatios[met]
-        sortedOutKeys[met] = sorted(outRatios, key=lambda x : outRatios[x][0],
+        sortedOutKeys[met] = sorted(outRatios, key=lambda x: outRatios[x][0],
                                     reverse=True)
-        sortedInKeys[met] = sorted(inRatios, key=lambda x : inRatios[x][0],
+        sortedInKeys[met] = sorted(inRatios, key=lambda x: inRatios[x][0],
                                    reverse=True)
         for i in range(len(sortedOutKeys[met])):
             try:
@@ -249,7 +289,7 @@ def writeSplitRatiosToFileHandle(f, splitRatios, threshold, omitUnbranched):
     for met in metaboliteList:
         outRatios, inRatios = splitRatios[met]
 
-        if omitUnbranched and len(outRatios) <= 1 and len(inRatios) <=1:
+        if omitUnbranched and len(outRatios) <= 1 and len(inRatios) <= 1:
             # Omit metabolite in output if it has an unbranched flux
             continue
 

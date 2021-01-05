@@ -4,7 +4,7 @@ through the reactions of a MetabolicModel.
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -21,10 +21,16 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import division
 
-from defines import typename, addToDictPlus, padNumber
-from metabolicmodel import MetabolicModel
+from builtins import zip
+from builtins import map
+from builtins import object
+from past.utils import old_div
+import csv
 from numpy import inf
+from metano.defines import typename, addToDictPlus, padNumber
+from metano.metabolicmodel import MetabolicModel
 
 
 class MetabolicFlux(object):
@@ -100,12 +106,11 @@ class MetabolicFlux(object):
             except KeyError:
                 lb, ub = -inf, inf
             s += "%s : %g (%g, %g)" % (name.ljust(maxlen), self.fluxDict[name],
-                                      lb, ub)
+                                       lb, ub)
             count += 1
             if count < nFluxes:
                 s += "\n"
         return s
-
 
     def clear(self):
         self.fluxDict = {}
@@ -122,7 +127,6 @@ class MetabolicFlux(object):
         """
         for name in self.fluxDict:
             self.fluxDict[name] = 0.
-
 
     def setByModel(self, model, fluxVec):
         """ assign the fluxes given by fluxVec to the reactions in the given
@@ -145,7 +149,7 @@ class MetabolicFlux(object):
         for (name, flux) in zip(model.getReactionNames(), fluxVec):
             self.fluxDict[name] = flux
         lb, ub = model.getBounds()
-        for name, bounds in zip(model.getReactionNames(), zip(lb, ub)):
+        for name, bounds in zip(model.getReactionNames(), list(zip(lb, ub))):
             self.boundsDict[name] = bounds
 
     def setByDict(self, d, fluxVec):
@@ -161,7 +165,8 @@ class MetabolicFlux(object):
         This function does not clear self.fluxDict beforehand.
         """
         if len(d) != len(fluxVec):
-            raise ValueError("Length of flux vector and dictionary don't agree")
+            raise ValueError(
+                "Length of flux vector and dictionary don't agree")
         for name in d:
             self.fluxDict[name] = fluxVec[d[name]]
 
@@ -179,8 +184,7 @@ class MetabolicFlux(object):
         """
         if len(names) != len(fluxVec):
             raise ValueError("Length of name list and flux vector don't agree")
-        self.fluxDict = dict(zip(names, fluxVec))
-
+        self.fluxDict = dict(list(zip(names, fluxVec)))
 
     def getVecOrderedByModel(self, model):
         """ return a flux vector ordered like the reactions in the model
@@ -227,7 +231,6 @@ class MetabolicFlux(object):
             if rea not in self.fluxDict:
                 return False
         return True
-
 
     def absDiff(self, other):
         """ return the absolute difference to the other MetabolicFlux as
@@ -294,7 +297,6 @@ class MetabolicFlux(object):
             diffDict[name] = diff*diff
         return MetabolicFlux(diffDict)
 
-
     def computeSplitRatios(self, metabolite, model, cutoff=0.,
                            cutoffIsAbsolute=False, listAll=False):
         """ compute split ratios for the fluxes entering and leaving the given
@@ -345,27 +347,26 @@ class MetabolicFlux(object):
         dontCheck = listAll or cutoffIsAbsolute
 
         posSum = sum(posDict.values())
-        reactions = posDict.keys()
+        reactions = list(posDict.keys())
         for rea in reactions:
             value = posDict[rea]
-            ratio = 0. if posSum == 0. else value/posSum
+            ratio = 0. if posSum == 0. else old_div(value, posSum)
             if dontCheck or ratio > cutoff:
                 posDict[rea] = ratio, value
             else:
                 del posDict[rea]
 
         negSum = sum(negDict.values())
-        reactions = negDict.keys()
+        reactions = list(negDict.keys())
         for rea in reactions:
             value = negDict[rea]
-            ratio = 0. if negSum == 0. else value/negSum
+            ratio = 0. if negSum == 0. else old_div(value, negSum)
             if dontCheck or ratio > cutoff:
                 negDict[rea] = ratio, value
             else:
                 del negDict[rea]
 
         return negDict, posDict
-
 
     def computeAllSplitRatios(self, model, cutoff=0., cutoffIsAbsolute=False,
                               listAll=False):
@@ -415,20 +416,20 @@ class MetabolicFlux(object):
         for met in splitRatios:
             negDict, posDict = splitRatios[met]
             posSum = sum(posDict.values())
-            reactions = posDict.keys()
+            reactions = list(posDict.keys())
             for rea in reactions:
                 value = posDict[rea]
-                ratio = 0. if posSum == 0. else value/posSum
+                ratio = 0. if posSum == 0. else old_div(value, posSum)
                 if dontCheck or ratio > cutoff:
                     posDict[rea] = ratio, value
                 else:
                     del posDict[rea]
 
             negSum = sum(negDict.values())
-            reactions = negDict.keys()
+            reactions = list(negDict.keys())
             for rea in reactions:
                 value = negDict[rea]
-                ratio = 0. if negSum == 0. else value/negSum
+                ratio = 0. if negSum == 0. else old_div(value, negSum)
                 if dontCheck or ratio > cutoff:
                     negDict[rea] = ratio, value
                 else:
@@ -436,14 +437,41 @@ class MetabolicFlux(object):
 
         return splitRatios
 
-
     # ------ File I/O ----------------------------------------------------------
 
     def writeToFile(self, filename):
         """ write to the given file
         """
         with open(filename, 'w') as f:
-            self.writeToFileHandle(f)
+            if filename.split(".")[-1] == "csv":
+                self.writeToCSVHandle(f)
+            else:
+                self.writeToFileHandle(f)
+
+    def writeToCSVHandle(self, f):
+        """ write to the CSV file given by file handle f (must be open for writing)
+        """
+        if not self.fluxDict:
+            return  # Nothing to do
+
+        csvwriter = csv.writer(
+            f, delimiter=";", quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        # Write Header to CSV file
+        csvwriter.writerow(["NAME", "FLUX", "LB", "UB"])
+        result = []
+        # Construct output table and get widths of table columns (length of
+        # longest occurring string)
+        for rea in self.fluxDict:
+            try:
+                lb, ub = self.boundsDict[rea]
+            except KeyError:
+                lb, ub = -inf, inf
+            # update python3
+            result.append([rea.name if type(rea) != str else rea,
+                           self.fluxDict[rea], lb, ub])
+
+        for row in sorted(result):
+            csvwriter.writerow(row)
 
     def writeToFileHandle(self, f):
         """ write to the file given by file handle f (must be open for writing)
@@ -454,7 +482,7 @@ class MetabolicFlux(object):
         # Construct output table and get widths of table columns (length of
         # longest occurring string)
         maxlenName, maxlenFlux, maxlenLb, maxlenUb = 0, 0, 0, 0
-        outputTable = {}  #  dict {name : (flux, lb, ub)} - all as strings
+        outputTable = {}  # dict {name : (flux, lb, ub)} - all as strings
         for rea in self.fluxDict:
             try:
                 lb, ub = self.boundsDict[rea]
@@ -462,9 +490,10 @@ class MetabolicFlux(object):
                 lb, ub = -inf, inf
 
             # Pad non-negative numbers with space
-            outputTable[rea] = tuple(map(padNumber, map(repr,
-                                     (self.fluxDict[rea], lb, ub))))
-            lenName, lenFlux, lenLb, lenUb = map(len, (rea,)+outputTable[rea])
+            outputTable[rea] = tuple(map(padNumber, list(map(repr,
+                                                             (self.fluxDict[rea], lb, ub)))))
+            lenName, lenFlux, lenLb, lenUb = list(
+                map(len, (rea,)+outputTable[rea]))
 
             if lenName > maxlenName:
                 maxlenName = lenName
@@ -476,19 +505,48 @@ class MetabolicFlux(object):
                 maxlenUb = lenUb
 
         # Write table head
-        f.write("NAME".ljust(maxlenName)+"   "+"FLUX".center(maxlenFlux)+" "+
+        f.write("NAME".ljust(maxlenName)+"   "+"FLUX".center(maxlenFlux)+" " +
                 "LB  ".rjust(maxlenLb)+" "+"UB  ".rjust(maxlenUb)+"\n")
         # Write result for the flux through every reaction
         for rea in sorted(self.fluxDict):
             flux, lb, ub = outputTable[rea]
+            # update python3
+            if type(rea) != str:
+                rea = rea.name
             f.write(rea.ljust(maxlenName) + " : " + flux.rjust(maxlenFlux) +
                     " " + lb.rjust(maxlenLb) + " " + ub.rjust(maxlenUb) + "\n")
 
     def readFromFile(self, filename):
         """ parse the given file
         """
-        with open(filename) as f:
-            self.readFromFileHandle(f)
+        with open(filename, 'r') as f:
+            if filename.split(".")[-1] == "csv":
+                self.readFromCSVHandle(f)
+            else:
+                self.readFromFileHandle(f)
+
+    def readFromCSVHandle(self, f):
+        """ parse the file given by file handle f (must be open for reading)
+        """
+        csvreader = csv.reader(f, delimiter=";", quotechar='"')
+
+        reactions = set()
+        line_no = 0
+        for line in csvreader:
+            line_no += 1
+            if line[0] == "NAME":
+                continue
+
+            try:
+                self.fluxDict[line[0]] = float(line[1])
+                self.boundsDict[line[0]] = line[2], line[3]
+            except IndexError:
+                raise SyntaxError("Syntax error in line %u:\nLine must "
+                                  "contain exactly four values (name, flux, "
+                                  "lb, ub)." % line_no)
+            except ValueError:
+                raise SyntaxError("Syntax error in line %u: Invalid "
+                                  "floating point value." % line_no)
 
     def readFromFileHandle(self, f):
         """ parse the file given by file handle f (must be open for reading)
@@ -498,11 +556,11 @@ class MetabolicFlux(object):
         for line in f:
             line_no += 1
             if (line.lstrip().upper().startswith("NAME") or line == "" or
-                line.isspace()):
+                    line.isspace()):
                 continue
 
             try:
-                rea, values_str = map(str.rstrip, line.split(":"))
+                rea, values_str = list(map(str.rstrip, line.split(":")))
             except ValueError:
                 raise SyntaxError("Syntax error in line %u:\nLine must "
                                   "contain exactly one colon (':')." %
@@ -513,7 +571,7 @@ class MetabolicFlux(object):
             reactions.add(rea)
 
             try:
-                values = map(float, values_str.split(None, 3)[:3])
+                values = list(map(float, values_str.split(None, 3)[:3]))
             except ValueError:
                 raise SyntaxError("Syntax error in line %u: Invalid "
                                   "floating point value." % line_no)

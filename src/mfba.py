@@ -2,7 +2,7 @@
 ''' Performs batch computation of flux balance analysis
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -20,6 +20,11 @@ You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
 '''
+from __future__ import print_function
+from builtins import zip
+from builtins import str
+from builtins import range
+from builtins import object
 import optparse
 import os
 from multiprocessing import Pool
@@ -29,7 +34,6 @@ from metano.reactionparser import ReactionParser
 from metano.paramparser import ParamParser
 from metano.fba import FbAnalyzer
 from metano.defines import FbaParam, COPYRIGHT_VERSION_STRING
-
 
 
 def unwrap_self_run(arg, **kwarg):
@@ -50,9 +54,10 @@ class OptionParser(optparse.OptionParser):
             for i in opt:
                 option = self.get_option(i)
                 if getattr(self.values, option.dest) is not None:
-                    print i, getattr(self.values, option.dest)
+                    print(i, getattr(self.values, option.dest))
                     return
-            self.error("you must provide at least on of these options: %s" % ", ".join(opt))
+            self.error(
+                "you must provide at least on of these options: %s" % ", ".join(opt))
 
         option = self.get_option(opt)
 
@@ -84,9 +89,9 @@ class MultipleFBA(object):
         self.names = [i.strip() for i in constraints[0].split("\t")[1:]]
         duplicates = set([x for x in self.names if self.names.count(x) > 1])
         if duplicates:
-            print "Error: Found duplicate scenario name(s) in constraint matrix:"
-            print "---", ", ".join(duplicates), "---"
-            print "Scenario names MUST be unique!"
+            print("Error: Found duplicate scenario name(s) in constraint matrix:")
+            print("---", ", ".join(duplicates), "---")
+            print("Scenario names MUST be unique!")
             exit()
         del constraints[0]
 
@@ -98,23 +103,24 @@ class MultipleFBA(object):
         try:
             self.run_count = len(line)-1
         except UnboundLocalError:
-            print "Error: Constraint matrix is empty!"
+            print("Error: Constraint matrix is empty!")
             exit()
 
         for line in scenario:
             if line[0] not in "\n":
                 self.insce.append(line)
 
-
     def perform_fba(self, run):
         """ performs multiple fba """
         insce_temp = self.insce[:]
         for constraint in self.rates:
-            insce_temp.append("\t".join([constraint, self.rates[constraint][run]]))
+            insce_temp.append(
+                "\t".join([constraint, self.rates[constraint][run]]))
 
         pparser = ParamParser()
 
-        maxmin, obj_str, solver, num_iter, lb, ub = pparser.parseByHandle(insce_temp)
+        maxmin, obj_str, solver, num_iter, lb, ub = pparser.parseByHandle(
+            insce_temp)
 
         fba_params = FbaParam(solver, maxmin, obj_str, num_iter)
         fba_params.setLinConstraints(pparser.lin_constraints)
@@ -122,7 +128,8 @@ class MultipleFBA(object):
         scenario_model.addReactions(self.model.reactions)
         scenario_model.setFiniteBounds(lb, ub, True)
         fba = FbAnalyzer()
-        obj_value, solution, _ = fba.runOnModel(scenario_model, fba_params, rmDeadEnds=True)
+        obj_value, solution, _ = fba.runOnModel(
+            scenario_model, fba_params, rmDeadEnds=True)
 
         result = [obj_value]
         messages = []
@@ -130,32 +137,32 @@ class MultipleFBA(object):
             try:
                 result.append(solution.fluxDict[rea])
             except KeyError:
-                messages.append("WARNING: %r could not be found in reactions" % rea)
+                messages.append(
+                    "WARNING: %r could not be found in reactions" % rea)
                 result.append(0.0)
-                #self.roi.remove(rea)
+                # self.roi.remove(rea)
         if messages and len(solution) != 0:
-            print "-" * max([len(i) for i in messages])
-            print "\n".join(messages)
-            print "-" * max([len(i) for i in messages])
-
+            print("-" * max([len(i) for i in messages]))
+            print("\n".join(messages))
+            print("-" * max([len(i) for i in messages]))
 
         if self.verb:
-            print self.names[run] + ":"
+            print(self.names[run] + ":")
         if len(solution) != 0:
             if self.verb:
-                print "Value of obj function:", obj_value
+                print("Value of obj function:", obj_value)
             if self.fba_file_prefix:
                 try:
-                    solution.writeToFile(self.fba_file_prefix + str(self.names[run]))
-                except IOError, strerror:
+                    solution.writeToFile(
+                        self.fba_file_prefix + str(self.names[run]) + ".txt")
+                except IOError as strerror:
                     print ("Unable to write to file %s:" %
-                           os.path.basename(self.fba_file_prefix + str(self.names[run])))
-                    print strerror
+                           os.path.basename(self.fba_file_prefix + str(self.names[run]) + ".txt"))
+                    print(strerror)
                     exit()
         elif self.verb:
-            print "No output written."
+            print("No output written.")
         return (self.names[run],) + tuple(result)
-            
 
     def run(self):
         """ performs one run at a time """
@@ -165,17 +172,17 @@ class MultipleFBA(object):
             result.append(res)
         return result
 
-
     def run_pool(self, cores):
         """ use multiprocessing for batch computation """
         pool = Pool(processes=cores)
-        result = pool.map(unwrap_self_run, zip([self]*self.run_count, range(self.run_count)))
+        result = pool.map(unwrap_self_run, list(
+            zip([self]*self.run_count, list(range(self.run_count)))))
         return result
-
 
     def write_solution_to_file(self, filename, solution):
         """ write solution to file """
-        write_solution = ["\t".join(["Scenario_name", "objective"] + [i for i in self.roi])]
+        write_solution = [
+            "\t".join(["Scenario_name", "objective"] + [i for i in self.roi])]
         for line in solution:
             write_solution.append("\t".join([str(i) for i in line]))
         with open(filename, "w") as f:
@@ -223,19 +230,20 @@ def main():
     model = MetabolicModel()
     try:
         model.addReactionsFromFile(options.reactionFile, rparser)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(options.reactionFile))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("Error in reaction file %s:" %
                os.path.basename(options.reactionFile))
-        print strerror
+        print(strerror)
         exit()
 
     if options.reactionsOfInterest:
-        reactions_of_interest = [i.strip() for i in options.reactionsOfInterest.split(",")]
+        reactions_of_interest = [i.strip()
+                                 for i in options.reactionsOfInterest.split(",")]
     else:
         reactions_of_interest = []
 
@@ -253,7 +261,7 @@ def main():
         result = mfba.run_pool(options.cores)
 
     if options.outputFile:
-        print "write ouput to file"
+        print("write ouput to file")
         mfba.write_solution_to_file(options.outputFile, result)
 
 

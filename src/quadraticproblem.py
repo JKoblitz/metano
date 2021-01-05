@@ -4,7 +4,7 @@ problem to be solved by an appropriate solver.
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -21,10 +21,12 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import absolute_import
 
+from builtins import object
 from openopt import QP
 from numpy import array
-from linearproblem import LinearProblem
+from metano.linearproblem import LinearProblem
 
 try:
     from cvxmod import matrix as cvxmod_matrix, optvar
@@ -40,24 +42,23 @@ except ImportError:
 
 class QuadraticProblem(LinearProblem):
     # Table of quadratic problem solvers with corresponding OpenOpt name
-    solvers = {'default'  : 'cvxopt_qp',          # cvxopt = try cvxmod first
-               'cvxopt'   : 'cvxopt_qp',          #  (fast) - if no convergence, 
-               'cvxopt_qp': 'cvxopt_qp',          #           try cvxpy (slower)
-               'cvxmod'   : 'cvxmod_only',
-               'cvxpy'    : 'cvxpy_only',
+    solvers = {'default': 'cvxopt_qp',          # cvxopt = try cvxmod first
+               'cvxopt': 'cvxopt_qp',  # (fast) - if no convergence,
+               'cvxopt_qp': 'cvxopt_qp',  # try cvxpy (slower)
+               'cvxmod': 'cvxmod_only',
+               'cvxpy': 'cvxpy_only',
                # Or use an NLP solver:
-               'ralg'     : 'nlp:ralg',           # for medium-sized problems;
-                                                  #   ill-conditioned
-               'cobyla'   : 'nlp:scipy_cobyla',   # recommended (for NLP)
-               'algencan' : 'nlp:algencan',       # recommended (for NLP)
-               'slsqp'    : 'nlp:scipy_slsqp',
-               'ipopt'    : 'nlp:ipopt',
-               'lincher'  : 'nlp:lincher'}        # very primitive
-    
+               'ralg': 'nlp:ralg',           # for medium-sized problems;
+               #   ill-conditioned
+               'cobyla': 'nlp:scipy_cobyla',   # recommended (for NLP)
+               'algencan': 'nlp:algencan',       # recommended (for NLP)
+               'slsqp': 'nlp:scipy_slsqp',
+               'ipopt': 'nlp:ipopt',
+               'lincher': 'nlp:lincher'}        # very primitive
+
     @staticmethod
     def isCvxQpSolver(solver):
         return solver.startswith("cvx") or solver == "default"
-
 
     class OoQp(object):
         """ class for objective function in OpenOpt's QP format:
@@ -67,10 +68,10 @@ class QuadraticProblem(LinearProblem):
             H - matrix of coefficients of quadratic terms and
             f - vector of coefficients of linear terms
         """
+
         def __init__(self, H=None, f=None):
             self.H = H
             self.f = f
-
 
     def __init__(self, Aeq, beq=None, Aineq=None, bineq=None, lb=None, ub=None,
                  solver=solvers['default']):
@@ -87,15 +88,14 @@ class QuadraticProblem(LinearProblem):
         solver  -- solver to be used for Quadratic Programming
         """
         LinearProblem.__init__(self, Aeq, beq, Aineq, bineq, lb, ub, solver)
-    
+
         self.obj = QuadraticProblem.OoQp()
         if _cvxmod_avail:
             self.cvxmodMatrix = cvxmod_matrix(array(Aeq))
             self.cvxmodV = optvar('v', self.cvxmodMatrix.size[1], 1)
         if _cvxpy_avail:
             self.cvxpyMatrix = array(Aeq)
-            self.cvxpyV = Variable(self.cvxpyMatrix.shape[1], 1, name='v')
-
+            self.cvxpyV = Variable(self.cvxpyMatrix.shape[1], 'v', 1)
 
     def setObjective(self, quad_coef, lin_coef):
         """ set the objective function in OpenOpt's QP format:
@@ -111,7 +111,6 @@ class QuadraticProblem(LinearProblem):
         """ shadow LinearProblem.resetObjective """
         pass
 
-
     def minimize(self, **kwargs):
         """ solve the quadratic problem using OpenOpt
 
@@ -123,7 +122,7 @@ class QuadraticProblem(LinearProblem):
         """
         qp = QP(self.obj.H, self.obj.f, A=self.Aineq, Aeq=self.Aeq,
                 b=self.bineq, beq=self.beq, lb=self.lb, ub=self.ub, **kwargs)
-        qp.debug=1
+        qp.debug = 1
         r = qp.solve(self.solver)
 
         if r.istop <= 0 or r.ff != r.ff:  # check halting condition

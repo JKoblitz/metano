@@ -7,7 +7,7 @@ extension: http://sbml.org/Documents/Specifications/SBML_Level_3/Packages/Flux_B
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -26,13 +26,17 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
-from defines import (Verbosity, ReaFileStruc, makeCoefNameTerm, isZeroVector,
+from builtins import zip
+from builtins import object
+from metano.defines import (Verbosity, ReaFileStruc, makeCoefNameTerm, isZeroVector,
                      COPYRIGHT_VERSION_STRING)
-from sbmlstructure import SbmlDef, getFirstElementChild
-from fba import OptionParser
-from metabolicmodel import Reactant, Reaction, MetabolicModel
-from metabolicflux import MetabolicFlux
+from metano.sbmlstructure import SbmlDef, getFirstElementChild
+from metano.fba import OptionParser
+from metano.metabolicmodel import Reactant, Reaction, MetabolicModel
+from metano.metabolicflux import MetabolicFlux
 import xml.dom.minidom as dom
 from xml.parsers.expat import ExpatError
 from numpy import inf
@@ -89,7 +93,7 @@ class SbmlParser(object):
         # Return only non-boundary species, with 'isBoundary' field removed
         metaboliteLabels = dict((ID, (name, compartment)) for
                                 (ID, (name, compartment, isBoundary)) in
-                                self.dictOfSpecies.items() if not isBoundary)
+                                list(self.dictOfSpecies.items()) if not isBoundary)
 
         return self.listOfReactions, metaboliteLabels, self.dictOfReactions
 
@@ -103,11 +107,11 @@ class SbmlParser(object):
                                                    names must be unique)
         """
         if reaNameDict:
-            return dict(zip([reaNameDict[x.name] for x in self.listOfReactions],
-                            self.listOfFluxValues))
+            return dict(list(zip([reaNameDict[x.name] for x in self.listOfReactions],
+                            self.listOfFluxValues)))
         else:
-            return dict(zip([x.name for x in self.listOfReactions],
-                            self.listOfFluxValues))
+            return dict(list(zip([x.name for x in self.listOfReactions],
+                            self.listOfFluxValues)))
 
     def getObjCoefficients(self, reaNameDict=None):
         """ return the coefficient vector of the linear objective function read
@@ -119,11 +123,11 @@ class SbmlParser(object):
                                                    names must be unique)
         """
         if reaNameDict:
-            return dict(zip([reaNameDict[x.name] for x in self.listOfReactions],
-                            self.listOfObjCoef))
+            return dict(list(zip([reaNameDict[x.name] for x in self.listOfReactions],
+                            self.listOfObjCoef)))
         else:
-            return dict(zip([x.name for x in self.listOfReactions],
-                            self.listOfObjCoef))
+            return dict(list(zip([x.name for x in self.listOfReactions],
+                            self.listOfObjCoef)))
 
     def getMessages(self, level=Verbosity.INFO):
         """ return a list of all messages at or above the given level of
@@ -231,7 +235,7 @@ class SbmlParser(object):
 
         if success:
             nBoundary = len([isBoundary for (_, _, isBoundary) in
-                             self.dictOfSpecies.values() if isBoundary])
+                             list(self.dictOfSpecies.values()) if isBoundary])
             msg = ("Info: The SBML model has %d reactions and %d species" %
                    (len(self.listOfReactions), len(self.dictOfSpecies)))
             if nBoundary:
@@ -242,7 +246,7 @@ class SbmlParser(object):
             if boundaryRegex:
                 try:
                     pattern = re.compile(boundaryRegex)
-                except re.error, strerror:
+                except re.error as strerror:
                     msg = ("Warning: Error in regular expression for boundary "
                            "metabolites: %s. Unable to evaluate." %
                            strerror)
@@ -331,7 +335,7 @@ class SbmlParser(object):
         # instead of IDs
         if usenames:
             metLabelDict = dict((k, "%s[%s]" % x)
-                                for (k, x) in metaboliteLabels.items())
+                                for (k, x) in list(metaboliteLabels.items()))
             model.setMetaboliteLabels(metLabelDict)
             model.setReactionLabels(reactionLabels)
             # Make sure that all reaction and metabolite labels are unique
@@ -1109,30 +1113,30 @@ def main():
     # 2. Set infinity level for bounds
 
     if options.infLevel <= 0.:
-        print "Error: Infinity level must be positive"
+        print("Error: Infinity level must be positive")
         exit()
     sbmlP = SbmlParser(options.infLevel)
 
     # 3. Read the SBML file
 
-    print "Start parsing.."
-    print "SBML file             '%s'" % options.sbmlFile
-    print "Output reaction file: '%s'" % options.outputFile
-    print "Output scenario file: '%s'" % options.outputParamFile
+    print("Start parsing..")
+    print("SBML file             '%s'" % options.sbmlFile)
+    print("Output reaction file: '%s'" % options.outputFile)
+    print("Output scenario file: '%s'" % options.outputParamFile)
     if options.boundaryRegex:
-        print "Boundary reg-ex:      '%s'" % options.boundaryRegex
-    print "Infinity starts at:   %r\n" % options.infLevel
+        print("Boundary reg-ex:      '%s'" % options.boundaryRegex)
+    print("Infinity starts at:   %r\n" % options.infLevel)
 
     try:
         success = sbmlP.readFile(options.sbmlFile, options.boundaryRegex)
-    except ExpatError, strerror:
-        print "Error in file %s:" % os.path.basename(options.sbmlFile)
-        print strerror
+    except ExpatError as strerror:
+        print("Error in file %s:" % os.path.basename(options.sbmlFile))
+        print(strerror)
         exit()
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(options.sbmlFile))
-        print strerror
+        print(strerror)
         exit()
 
     if options.debugInfo:
@@ -1141,7 +1145,7 @@ def main():
         # Show only error, warning, and info messages
         msgs = sbmlP.getMessages()
     if msgs:
-        print ('\n'.join(msgs)).encode('ascii', 'replace')
+        print(('\n'.join(msgs)).encode('ascii', 'replace'))
 
     # Do not try to build the model if a critical error occurred
     if not success:
@@ -1157,8 +1161,8 @@ def main():
 
     if options.usenames:
         # Get unique reaction labels
-        reaLabels = dict(zip(model.getReactionNames(),
-                             model._getTranslatedReactionNames()))
+        reaLabels = dict(list(zip(model.getReactionNames(),
+                             model._getTranslatedReactionNames())))
     else:
         reaLabels = None
 
@@ -1167,7 +1171,7 @@ def main():
     objCoefficients = sbmlP.getObjCoefficients(reaLabels)
     objStr = ""
 
-    if isZeroVector(objCoefficients.values()):
+    if isZeroVector(list(objCoefficients.values())):
         # No coefficients found - look for 'biomass' reaction instead
 
         # Make a regex pattern for case-insensitive matching of 'biomass'
@@ -1192,10 +1196,10 @@ def main():
 
     try:
         model.writeToFile(options.outputFile, not options.noComments)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("Unable to write to file %s:" %
                os.path.basename(options.outputFile))
-        print strerror
+        print(strerror)
         exit()
 
     # 8. Write scenario file
@@ -1209,10 +1213,10 @@ def main():
                 preamble += "SOLVER %s\n" % options.solver
             f.write(preamble + "\n")
             model.writeBoundsToParamFileHandle(f)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("Unable to write to file %s:" %
                os.path.basename(options.outputParamFile))
-        print strerror
+        print(strerror)
         exit()
 
     # 9. Write flux file
@@ -1231,13 +1235,13 @@ def main():
         flux = MetabolicFlux(fluxDict, boundsDict)
         try:
             flux.writeToFile(options.outputFluxFile)
-        except IOError, strerror:
+        except IOError as strerror:
             print ("Unable to write to file %s:" %
                    os.path.basename(options.outputFluxFile))
-            print strerror
+            print(strerror)
             exit()
 
-    print "Finished successfully."
+    print("Finished successfully.")
 
 
 if __name__ == "__main__":

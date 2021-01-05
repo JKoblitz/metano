@@ -11,7 +11,7 @@ Usage:
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -28,13 +28,18 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
 
-from fba import OptionParser
-from reactionparser import ReactionParser
-from paramparser import ParamParser
-from metabolicmodel import MetabolicModel
-from metabolicflux import MetabolicFlux
-from defines import COPYRIGHT_VERSION_STRING
+from builtins import range
+from past.utils import old_div
+from metano.fba import OptionParser
+from metano.reactionparser import ReactionParser
+from metano.paramparser import ParamParser
+from metano.metabolicmodel import MetabolicModel
+from metano.metabolicflux import MetabolicFlux
+from metano.defines import COPYRIGHT_VERSION_STRING
 import os
 import sys
 from numpy import dot
@@ -46,7 +51,7 @@ def checkIrrev(solution, model):
 
     Returns negViolations, posViolations - {reaction : flux} dicts
     """
-    negViolations, posViolations =  {}, {}
+    negViolations, posViolations = {}, {}
     for rea in solution:
         if rea not in model.reactionDict:
             continue
@@ -157,14 +162,15 @@ def checkMassBalance(solution, model):
             svmax = sv[i]
             svmax_i = i
 
-    return (svsum / nMetabolites, svmax, svmin, model.metabolites[svmax_i],
-                                                model.metabolites[svmin_i])
+    return (old_div(svsum, nMetabolites), svmax, svmin, model.metabolites[svmax_i],
+            model.metabolites[svmin_i])
+
 
 def printMassBalanceCheckResult(svavg, svmax, svmin, svmaxMet, svminMet):
     """ print the result of checkMassBalance() - simple call:
         printMassBalanceCheckResult(*checkMassBalance(solution, model))
     """
-    print "Mean deviation from zero in S*v: %g" % svavg
+    print("Mean deviation from zero in S*v: %g" % svavg)
     print ("Maximum pos. deviation from zero in S*v: %g in metabolite %s" %
            (svmax, svmaxMet))
     print ("Maximum neg. deviation from zero in S*v: %g in metabolite %s" %
@@ -217,12 +223,13 @@ def checkLinConstraints(solution, model, linConstraints):
 
     return eqErr, ineqErr
 
+
 def printLinConstraintCheckResult(eqErr, ineqErr, linConstraints):
     if eqErr:
-        print "Deviation in additional linear equality constraints:"
+        print("Deviation in additional linear equality constraints:")
         j = 1  # Counter for enumeration of equality constraints
         for i in sorted(eqErr):
-            print "%3d: %g (%s)" % (j, eqErr[i], linConstraints[i])
+            print("%3d: %g (%s)" % (j, eqErr[i], linConstraints[i]))
             j += 1
 
     if ineqErr:
@@ -231,9 +238,9 @@ def printLinConstraintCheckResult(eqErr, ineqErr, linConstraints):
         for i in sorted(ineqErr):
             if ineqErr[i] > 0.:
                 if conforms:
-                    print "Deviation in linear inequality constraints:"
+                    print("Deviation in linear inequality constraints:")
                     conforms = False
-                print "%3d: %g (%s)" % (j, ineqErr[i], linConstraints[i])
+                print("%3d: %g (%s)" % (j, ineqErr[i], linConstraints[i]))
         if conforms:
             print ("The given solution conforms to all linear inequality "
                    "constraints.")
@@ -262,19 +269,19 @@ def main():
         print ("Error: No solution file given.\nUsage is\n    " +
                os.path.basename(sys.argv[0]) + " <solution-file> [options]")
         exit()
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(args[0]))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("An error occurred parsing file %s:" %
                os.path.basename(args[0]))
-        print strerror
+        print(strerror)
         exit()
 
     if options.reactionFile is None and options.paramFile is None:
-        print "Neither reaction nor scenario file given. Nothing to do."
+        print("Neither reaction nor scenario file given. Nothing to do.")
         exit()
 
     # 3. Parse reaction file (if given) and check irreversibilities
@@ -284,15 +291,15 @@ def main():
         rparser = ReactionParser()
         try:
             model.addReactionsFromFile(options.reactionFile, rparser)
-        except IOError, strerror:
+        except IOError as strerror:
             print ("An error occurred while trying to read file %s:" %
                    os.path.basename(options.reactionFile))
-            print strerror
+            print(strerror)
             exit()
-        except SyntaxError, strerror:
+        except SyntaxError as strerror:
             print ("Error in reaction file %s:" %
                    os.path.basename(options.reactionFile))
-            print strerror
+            print(strerror)
             exit()
 
         negViolations, posViolations = checkIrrev(solution, model)
@@ -314,18 +321,18 @@ def main():
         pparser = ParamParser()
         try:
             lb, ub = pparser.parse(options.paramFile)[4:]
-        except IOError, strerror:
+        except IOError as strerror:
             print ("An error occurred while trying to read file %s:" %
                    os.path.basename(options.paramFile))
-            print strerror
+            print(strerror)
             exit()
-        except SyntaxError, strerror:
+        except SyntaxError as strerror:
             print ("Error in scenario file %s:" %
                    os.path.basename(options.paramFile))
-            print strerror
+            print(strerror)
             exit()
-        except ValueError, strerror:
-            print strerror
+        except ValueError as strerror:
+            print(strerror)
             exit()
         linConstraints = pparser.lin_constraints
 
@@ -333,9 +340,9 @@ def main():
         conforms = conforms and not lbViolations and not ubViolations
 
         for rea in lbViolations:
-            print ("%s (%g) violates LB %g." % ((rea,)+ lbViolations[rea]))
+            print ("%s (%g) violates LB %g." % ((rea,) + lbViolations[rea]))
         for rea in ubViolations:
-            print ("%s (%g) violates UB %g." % ((rea,)+ ubViolations[rea]))
+            print ("%s (%g) violates UB %g." % ((rea,) + ubViolations[rea]))
     else:
         linConstraints = None
 

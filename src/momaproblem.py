@@ -19,7 +19,7 @@ preferably, as it is faster. Only if CVXMOD fails to converge, CVXPY is used.
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -36,20 +36,18 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
-# TODO Release:
-# - remove 'weights'
-
+from builtins import range
 from numpy import array, eye, inf, isnan, diag, sqrt, linalg
-from defines import SolverStatus, cvxToSolverStatus, cvxpyToSolverStatus
-from linearproblem import SolverError
-from quadraticproblem import QuadraticProblem, _cvxmod_avail, _cvxpy_avail
+from metano.defines import SolverStatus, cvxToSolverStatus, cvxpyToSolverStatus
+from metano.linearproblem import SolverError
+from metano.quadraticproblem import QuadraticProblem, _cvxmod_avail, _cvxpy_avail
 if _cvxmod_avail:
     import cvxmod
 if _cvxpy_avail:
     import cvxpy
-
-#print cvxpy.Problem.__dict__.keys()
 
 
 class MomaProblem(QuadraticProblem):
@@ -57,7 +55,6 @@ class MomaProblem(QuadraticProblem):
     matrix_tol = 1E-5     # tolerance for matrix constraints
     bounds_tol = 1E-6     # tolerance for bounds constraints
     BIG_NUMBER = 100000
-
 
     def __init__(self, Aeq, beq=None, Aineq=None, bineq=None, lb=None, ub=None,
                  solver=QuadraticProblem.solvers['default'], solution=None,
@@ -76,7 +73,7 @@ class MomaProblem(QuadraticProblem):
         solution    -- the solution for the wildtype
         weights     -- weight vector
         """
-        print "Momaproblem", solver
+        print("Momaproblem", solver)
         QuadraticProblem.__init__(self, Aeq, beq, Aineq, bineq, lb, ub, solver)
         if weights is None:
             self.weights = None
@@ -90,13 +87,11 @@ class MomaProblem(QuadraticProblem):
         if solution is not None:
             self.obj.f = -array(solution)
 
-
     def setWtSolution(self, solution):
         """ set the solution for the wildtype against which to perform MOMA in
             the objective function definition of the underlying QuadraticProblem
         """
         self.obj.f = -array(solution)
-
 
     def minimize(self, **kwargs):
         if self.solver.startswith("cvx"):
@@ -106,7 +101,7 @@ class MomaProblem(QuadraticProblem):
                                   self.solver)
             nCols = len(self.lb)
             lb = [-self.BIG_NUMBER]*nCols
-            ub = [ self.BIG_NUMBER]*nCols
+            ub = [self.BIG_NUMBER]*nCols
             for i in range(nCols):
                 if self.lb[i] > -inf:
                     lb[i] = self.lb[i]-self.bounds_tol
@@ -131,7 +126,6 @@ class MomaProblem(QuadraticProblem):
             if self.weights is not None:
                 self.obj.f /= self.weights
             return solution
-
 
     def _cvxmod_minimize(self, lb, ub, **kwargs):
         """ solve quadratic problem using CVXMOD interface
@@ -160,23 +154,23 @@ class MomaProblem(QuadraticProblem):
             bineq = cvxmod.matrix(self.bineq)
             if self.weights is None:
                 p = cvxmod.problem(cvxmod.minimize(cvxmod.norm2(v+minus_w)),
-                            [cvxmod.abs(A*v) < self.matrix_tol,
-                             Aineq*v <= bineq+self.matrix_tol,
-                             v >= lb, v <= ub])
+                                   [cvxmod.abs(A*v) < self.matrix_tol,
+                                    Aineq*v <= bineq+self.matrix_tol,
+                                    v >= lb, v <= ub])
             else:
-                p = cvxmod.problem(cvxmod.minimize(cvxmod.norm2(weights*
-                            (v+minus_w))), [cvxmod.abs(A*v) < self.matrix_tol,
-                             Aineq*v <= bineq+self.matrix_tol,
-                             v >= lb, v <= ub])
+                p = cvxmod.problem(cvxmod.minimize(cvxmod.norm2(weights *
+                                                                (v+minus_w))), [cvxmod.abs(A*v) < self.matrix_tol,
+                                                                                Aineq*v <= bineq+self.matrix_tol,
+                                                                                v >= lb, v <= ub])
         else:
             if self.weights is None:
                 p = cvxmod.problem(cvxmod.minimize(cvxmod.norm2(v+minus_w)),
-                            [cvxmod.abs(A*v) < self.matrix_tol,
-                             v >= lb, v <= ub])
+                                   [cvxmod.abs(A*v) < self.matrix_tol,
+                                    v >= lb, v <= ub])
             else:
-                p = cvxmod.problem(cvxmod.minimize(cvxmod.norm2(weights*
-                            (v+minus_w))), [cvxmod.abs(A*v) < self.matrix_tol,
-                             v >= lb, v <= ub])
+                p = cvxmod.problem(cvxmod.minimize(cvxmod.norm2(weights *
+                                                                (v+minus_w))), [cvxmod.abs(A*v) < self.matrix_tol,
+                                                                                v >= lb, v <= ub])
 
         self.status = cvxToSolverStatus(p.solve())
 
@@ -188,7 +182,6 @@ class MomaProblem(QuadraticProblem):
             self.obj_value = p.value
         except cvxmod.OptvarValueError:
             self.obj_value = inf
-
 
     def _cvxpy_minimize(self, lb, ub, **kwargs):
         """ solve quadratic problem using CVXPY interface
@@ -216,13 +209,13 @@ class MomaProblem(QuadraticProblem):
             Aineq = array(self.Aineq)
             bineq = array(self.bineq)
             p = cvxpy.Problem(cvxpy.Minimize(cvxpy.norm2(v+minus_w)),
-                        [cvxpy.abs(A*v) <= self.matrix_tol,
-                         (Aineq*v, bineq) <= v, v >= lb,
-                         v <= ub])
+                              [cvxpy.abs(A*v) <= self.matrix_tol,
+                               (Aineq*v, bineq) <= v, v >= lb,
+                               v <= ub])
         else:
             p = cvxpy.Problem(cvxpy.Minimize(cvxpy.norm2(v+minus_w)),
-                        [cvxpy.abs(A*v) <= self.matrix_tol,
-                         v >= lb, v <= ub])
+                              [cvxpy.abs(A*v) <= self.matrix_tol,
+                               v >= lb, v <= ub])
 
         # Configure program ('abstol', 'feastol', 'reltol', 'maxiters')
         """for k in kwargs:
@@ -230,17 +223,14 @@ class MomaProblem(QuadraticProblem):
                 p.options[k] = kwargs[k]
             except KeyError:
                 continue"""
-        print kwargs
-        self.obj_value = p.solve(solver="CVXOPT", reltol = kwargs['reltol'], 
-            abstol = kwargs['abstol'], feastol = kwargs['feastol'])#, 
-            #maxiters = kwargs['maxiters'], gtol = kwargs['gtol'], maxIter = kwargs['maxIter'])
+        self.obj_value = p.solve(solver="CVXOPT", reltol=kwargs['reltol'],
+                                 abstol=kwargs['abstol'], feastol=kwargs['feastol'])
         self.status = cvxpyToSolverStatus(self.obj_value)
 
-        if len(v.value) == 0 or isnan(v.value[0,0]):
+        if len(v.value) == 0 or isnan(v.value[0]):
             self.solution = []
         else:
-            self.solution = array(v.value.T)[0,:]
-
+            self.solution = array(v.value.T)[:]
 
     def eval(self, v):
         """ evaluate objective function for vector v

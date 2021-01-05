@@ -4,7 +4,7 @@ to be solved by an appropriate solver.
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2014 Alexander Riemer,
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -21,10 +21,13 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import absolute_import
 
+from builtins import range
+from builtins import object
 from openopt import LP
 from numpy import dot, inf, isinf
-from defines import SolverStatus, glpkToSolverStatus
+from metano.defines import SolverStatus, glpkToSolverStatus
 import pymprog
 
 
@@ -35,8 +38,10 @@ _OOGLPK = 'ooglpk'
 class SolverError(Exception):
     """ Exception raised if an unknown or inapplicable solver is selected
     """
+
     def __init__(self, value):
         self.value = value
+
     def __str__(self):
         return repr(self.value)
 
@@ -44,12 +49,11 @@ class SolverError(Exception):
 class LinearProblem(object):
 
     # Table of linear problem solvers with corresponding OpenOpt/internal name
-    solvers = {'default' : 'glpk',
-               'lpsolve' : 'lpSolve',
-               'cvxopt'  : 'cvxopt_lp',
-               'glpk'    : _GLPK,
-               'ooglpk'  : _OOGLPK}
-
+    solvers = {'default': 'glpk',
+               'lpsolve': 'lpSolve',
+               'cvxopt': 'cvxopt_lp',
+               'glpk': _GLPK,
+               'ooglpk': _OOGLPK}
 
     def __init__(self, Aeq, beq=None, Aineq=None, bineq=None, lb=None, ub=None,
                  solver=solvers['default']):
@@ -74,7 +78,7 @@ class LinearProblem(object):
             self.solver = self.solvers[solver.lower()]
         except KeyError:
             raise SolverError("Unknown solver '%s'. Try one of the following:"
-                              "\n%s" % (solver, self.solvers.keys()))
+                              "\n%s" % (solver, list(self.solvers.keys())))
         self.Aeq = Aeq
         self.Aineq = Aineq
         self.bineq = bineq
@@ -124,22 +128,22 @@ class LinearProblem(object):
                 raise ValueError("Error: Matrix Aineq has wrong number of "
                                  "columns.")
 
-
         # Result values
-        self.obj_value = 0. # value of objective function at solution
+        self.obj_value = 0.  # value of objective function at solution
         self.solution = []  # solution vector
 
         if self.solver == _GLPK:
-            rangeCols = range(nCols)
+            rangeCols = list(range(nCols))
 
             self.glpkP = pymprog.model('LP')
-            self.glpkVar = self.glpkP.var('flux', rangeCols, bounds=(None,None))
+            self.glpkVar = self.glpkP.var(
+                'flux', rangeCols, bounds=(None, None))
             self.glpkP.solver("simplex", msg_lev=pymprog.glpk.GLP_MSG_ERR)
 
             # Mass balance and other equality constraints
             self.glpkP.st(sum(self.glpkVar[j] * float(Aeq[i][j])
                               for j in rangeCols if Aeq[i][j] != 0.) ==
-                              float(beq[i]) for i in range(nRows))
+                          float(beq[i]) for i in range(nRows))
 
             # Flux bounds constraints
             self.glpkP.st([self.glpkVar[i] >= float(lb[i])
@@ -151,11 +155,10 @@ class LinearProblem(object):
             if nIneq:
                 self.glpkP.st(sum(self.glpkVar[j] * float(Aineq[i][j])
                                   for j in rangeCols if Aineq[i][j] != 0.)
-                                  <= float(bineq[i]) for i in range(nIneq))
+                              <= float(bineq[i]) for i in range(nIneq))
 
             # Set to verbose
-            #self.glpkP.verb=False
-
+            # self.glpkP.verb=False
 
     def setInequalityConstraints(self, Aineq=None, bineq=None):
         """ set inequality constraints for optimization (or unset if None)
@@ -176,17 +179,18 @@ class LinearProblem(object):
 
         if self.solver == _GLPK:
             # Construct new model object (because constraints can't be unset)
-            rangeCols = range(nCols)
+            rangeCols = list(range(nCols))
 
             self.glpkP = pymprog.model('LP')
-            self.glpkVar = self.glpkP.var('flux', rangeCols, bounds=(None,None))
+            self.glpkVar = self.glpkP.var(
+                'flux', rangeCols, bounds=(None, None))
             self.glpkP.solver("simplex", msg_lev=pymprog.glpk.GLP_MSG_ERR)
             nRows = len(self.Aeq)
 
             # Mass balance constraints
             self.glpkP.st(sum(self.glpkVar[j] * float(self.Aeq[i][j])
                               for j in rangeCols if self.Aeq[i][j] != 0.) ==
-                              float(self.beq[i]) for i in range(nRows))
+                          float(self.beq[i]) for i in range(nRows))
 
             # Flux bounds constraints
             self.glpkP.st([self.glpkVar[i] >= float(self.lb[i])
@@ -198,8 +202,7 @@ class LinearProblem(object):
                 # Inequality constraints
                 self.glpkP.st(sum(self.glpkVar[j] * float(Aineq[i][j])
                                   for j in rangeCols if Aineq[i][j] != 0.)
-                                  <= float(bineq[i]) for i in range(nIneq))
-
+                              <= float(bineq[i]) for i in range(nIneq))
 
     def setObjective(self, obj):
         """ set objective function as coefficient vector
@@ -224,7 +227,6 @@ class LinearProblem(object):
             self.glpkP.min(sum(self.glpkVar[i]*0. for i in self.objIndices),
                            "objective")
 
-
     def minimize(self, **kwargs):
         """ solve the linear problem with the solver given in self.solver
 
@@ -238,7 +240,7 @@ class LinearProblem(object):
             # Use pyMathProg interface to GLPK solver
             self.glpkP.solve()
 
-            self.istop = self.glpkP.status()
+            self.istop = self.glpkP.status(str)  # fix for pymprog v1.1
 #            print "istop:", self.istop
             self.status = glpkToSolverStatus(self.istop)
 
@@ -253,7 +255,7 @@ class LinearProblem(object):
             # Use OpenOpt interface
             lp = LP(self.obj, A=self.Aineq, Aeq=self.Aeq, b=self.bineq,
                     beq=self.beq, lb=self.lb, ub=self.ub, **kwargs)
-            lp.debug=1
+            lp.debug = 1
 #            lp.iprint=-1 # suppress solver output
             r = lp.solve(self.solver if self.solver != _OOGLPK else 'glpk')
 
@@ -268,7 +270,6 @@ class LinearProblem(object):
 #            print self.istop
 
         return self.obj_value, self.solution
-
 
     def eval(self, v):
         """ evaluate objective function for vector v

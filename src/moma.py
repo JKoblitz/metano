@@ -13,7 +13,7 @@ appropriate solver.
 
 
 This file is part of metano.
-Copyright (C) 2010-2017 Alexander Riemer, Julia Helmecke
+Copyright (C) 2010-2019 Alexander Riemer, Julia Helmecke
 Braunschweig University of Technology,
 Dept. of Bioinformatics and Biochemistry
 
@@ -30,29 +30,29 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with metano.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
-# TODO Release:
-# - remove wMOMA: _DEFAULT_ALPHA/BETA, weights, weightsRed, weighted
-# - remove option_group("Extra options for weighted MOMA")
-# - remove step 7. (Optionally) Read FVA solution and compute weights
-
-from fba import OptionParser, FbAnalyzer
-from reactionparser import ReactionParser
-from paramparser import ParamParser
-from metabolicmodel import MetabolicModel
-from metabolicflux import MetabolicFlux
-from momaproblem import MomaProblem
-from nonlinearproblem import NonLinearProblem
-from startpointiterator import StartPointIterator
-from fva import FvAnalyzer
-from defines import (SolverStatus, printHistogram, printStatus, FbaParam,
-                     COPYRIGHT_VERSION_STRING)
+from builtins import map
+from builtins import range
+from builtins import object
+from metano.fba import OptionParser, FbAnalyzer
+from metano.reactionparser import ReactionParser
+from metano.paramparser import ParamParser
+from metano.metabolicmodel import MetabolicModel
+from metano.metabolicflux import MetabolicFlux
+from metano.momaproblem import MomaProblem
+from metano.nonlinearproblem import NonLinearProblem
+from metano.startpointiterator import StartPointIterator
+from metano.fva import FvAnalyzer
+from metano.defines import (SolverStatus, printHistogram, printStatus, FbaParam,
+                            COPYRIGHT_VERSION_STRING)
 from numpy import array, dot, nan, sqrt, ndarray
 from math import exp
 import os
 
-_DEFAULT_ALPHA    = 1E-6
-_DEFAULT_BETA     = .15
+_DEFAULT_ALPHA = 1E-6
+_DEFAULT_BETA = .15
 
 
 class MomaAnalyzer(object):
@@ -81,7 +81,6 @@ class MomaAnalyzer(object):
             mini, maxi = fvaMinmax[rea]
             weights.append(alpha+exp(beta*(mini-maxi)))
         return weights
-
 
     def run(self, matrix, lb, ub, wtSolution, eqs=[], ineqs=[], numIter=1,
             weights=None):
@@ -122,19 +121,19 @@ class MomaAnalyzer(object):
                 ps = NonLinearProblem(Aeq, beq, Aineq, bineq, lb, ub,
                                       self.solver)
                 if weights is None:
-                    ps.setObjective(lambda x : dot(x-wtVec, x-wtVec))
-                    ps.setObjGrad(lambda x : 2*(x-wtVec))
+                    ps.setObjective(lambda x: dot(x-wtVec, x-wtVec))
+                    ps.setObjGrad(lambda x: 2*(x-wtVec))
                 else:
                     if not isinstance(weights, ndarray):
-                        weights=array(weights)
-                    ps.setObjective(lambda x : dot(x-wtVec, (x-wtVec)*weights))
-                    ps.setObjGrad(lambda x : 2*sqrt(weights)*(x-wtVec))
+                        weights = array(weights)
+                    ps.setObjective(lambda x: dot(x-wtVec, (x-wtVec)*weights))
+                    ps.setObjGrad(lambda x: 2*sqrt(weights)*(x-wtVec))
                 spIter = StartPointIterator(len(lb), numIter)
                 spIter.setRange(-1., 1.)
                 ps.setStartPointIterator(spIter)
 
-        except ValueError, strerror:
-            print strerror
+        except ValueError as strerror:
+            print(strerror)
             exit()
 
         try:
@@ -142,23 +141,22 @@ class MomaAnalyzer(object):
                                              maxFunEvals=1e5, abstol=1e-6,
                                              feastol=1e-5, reltol=1e-5,
                                              maxiters=100)
-        except ValueError, strerror:
+        except ValueError as strerror:
             if self.solver == "default":
-                print "Default solver reported an error:"
+                print("Default solver reported an error:")
             else:
-                print "Solver %s reported an error:" % self.solver
-            print strerror
-            print "Consider trying a different solver."
+                print("Solver %s reported an error:" % self.solver)
+            print(strerror)
+            print("Consider trying a different solver.")
             return nan, [], ps.status
-        except KeyError, strerror:
-            print strerror
+        except KeyError as strerror:
+            print(strerror)
             exit()
 
         if hasattr(ps, "getHistogram"):
             printHistogram(*ps.getHistogram(32))
 
         return distance, solution, ps.status
-
 
     def runOnModel(self, model, wtSolution, linConstraints=[], numIter=1,
                    weights=None, blockedReactions=[]):
@@ -215,18 +213,19 @@ class MomaAnalyzer(object):
 
         matrix = array(modelRed.getStoichiometricMatrix())
         dimReduced = matrix.shape
-        lb, ub = map(array, modelRed.getBounds())
+        lb, ub = list(map(array, modelRed.getBounds()))
         try:
             eqs, ineqs = ParamParser.linConstraintsToVectors(linConstraints,
-                                                          modelRed.reactionDict)
+                                                             modelRed.reactionDict)
         except ValueError:
             # If any linear constraint is contradictory, return empty solution
-            return (nan, MetabolicFlux(),SolverStatus.PRIM_INFEAS,
+            return (nan, MetabolicFlux(), SolverStatus.PRIM_INFEAS,
                     array(modelRed.getStoichiometricMatrix()).shape)
 
         distance, solution, status = self.run(matrix, lb, ub,
-                                      wtSolution.getVecOrderedByModel(modelRed),
-                                      eqs, ineqs, numIter, weightsRed)
+                                              wtSolution.getVecOrderedByModel(
+                                                  modelRed),
+                                              eqs, ineqs, numIter, weightsRed)
         flux = MetabolicFlux(modelRed, solution)
 
         # Add removed reactions with flux 0. and original bounds to solution
@@ -239,7 +238,6 @@ class MomaAnalyzer(object):
 
         return distance, flux, status, dimReduced
 
-
     def evalObjFunc(self, wtVec, solution, weights=None):
         if MomaProblem.isCvxQpSolver(self.solver):
             ps = MomaProblem([[0.]*len(wtVec)], lb=[0.]*len(wtVec),
@@ -249,10 +247,10 @@ class MomaAnalyzer(object):
             ps = NonLinearProblem([[0.]], lb=[0.], ub=[0.], solver=self.solver)
             if weights is not None:
                 if not isinstance(weights, ndarray):
-                    weights=array(weights)
-                ps.setObjective(lambda x : dot(x-wtVec, (x-wtVec)*weights))
+                    weights = array(weights)
+                ps.setObjective(lambda x: dot(x-wtVec, (x-wtVec)*weights))
             else:
-                ps.setObjective(lambda x : dot(x-wtVec, x-wtVec))
+                ps.setObjective(lambda x: dot(x-wtVec, x-wtVec))
         return ps.eval(solution)
 
 
@@ -290,23 +288,23 @@ def main():
                          "w = alpha + exp(-beta*(fvaMax-fvaMin)) (default: %g)"
                          % _DEFAULT_ALPHA)
     wmOptions.add_option("-b", "--beta", dest="beta", type="float",
-                          help="parameter BETA for computation of weights: "
-                          "w = alpha + exp(-beta*(fvaMax-fvaMin)) (default: %g)"
-                          % _DEFAULT_BETA)
+                         help="parameter BETA for computation of weights: "
+                         "w = alpha + exp(-beta*(fvaMax-fvaMin)) (default: %g)"
+                         % _DEFAULT_BETA)
     optOptions = parser.add_option_group("Options for optimization")
     optOptions.add_option("-s", "--solver", dest="solver", help="QP/NLP solver "
                           "to be used for MOMA (default: cvxopt)")
     optOptions.add_option("-i", "--iterations", dest="numIter", type="int",
                           help="number of NLP runs to perform (from different "
                           "random start points; default: %u)" %
-                          FbaParam.DEFAULT_NUMITER , metavar="N")
+                          FbaParam.DEFAULT_NUMITER, metavar="N")
     optOptions.add_option("-l", "--use-full-matrix", action="store_true",
                           dest="useFullMatrix", help="use full matrix (disable "
                           "removal of dead ends, nonfunctional reactions, and "
                           "reactions with flux restricted to zero) - slow")
     parser.set_defaults(solver="default", useFullMatrix=False,
                         alpha=_DEFAULT_ALPHA, beta=_DEFAULT_BETA,
-                        numIter=FbaParam.DEFAULT_NUMITER )
+                        numIter=FbaParam.DEFAULT_NUMITER)
 
     options, _ = parser.parse_args()
     parser.check_required("-r")
@@ -316,14 +314,14 @@ def main():
 
     if options.wMomaFvaFile:
         if options.alpha < 0.:
-            print "Error: alpha must be non-negative."
+            print("Error: alpha must be non-negative.")
             exit()
         if options.beta <= 0.:
-            print "Error: beta must be positive."
+            print("Error: beta must be positive.")
             exit()
 
     if options.numIter < 1:
-        print "Error: Number of NLP runs must be positive."
+        print("Error: Number of NLP runs must be positive.")
         exit()
 
     # 2. Parse reaction file
@@ -332,15 +330,15 @@ def main():
     model = MetabolicModel()
     try:
         model.addReactionsFromFile(options.reactionFile, rparser)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(options.reactionFile))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("Error in reaction file %s:" %
                os.path.basename(options.reactionFile))
-        print strerror
+        print(strerror)
         exit()
 
     # 3. Parse scenario file
@@ -352,18 +350,18 @@ def main():
         linConstraints = pparser.lin_constraints
         # Set flux bounds in model
         model.setFiniteBounds(lb, ub, True, model_messages)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(options.paramFile))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("Error in scenario file %s:" %
                os.path.basename(options.paramFile))
-        print strerror
+        print(strerror)
         exit()
-    except ValueError, strerror:
-        print strerror
+    except ValueError as strerror:
+        print(strerror)
         exit()
 
     # 4. Parse solution file for wildtype
@@ -371,19 +369,19 @@ def main():
     wtFlux = MetabolicFlux()
     try:
         wtFlux.readFromFile(options.wtSolution)
-    except IOError, strerror:
+    except IOError as strerror:
         print ("An error occurred while trying to read file %s:" %
                os.path.basename(options.wtSolution))
-        print strerror
+        print(strerror)
         exit()
-    except SyntaxError, strerror:
+    except SyntaxError as strerror:
         print ("An error occurred parsing file %s:" %
                os.path.basename(options.wtSolution))
-        print strerror
+        print(strerror)
         exit()
 
     if not wtFlux.hasSameReactions(model):
-        print "Error: Solution and model must have the same reactions."
+        print("Error: Solution and model must have the same reactions.")
         exit()
 
     # 5. (Optionally) Read FVA solution for reducing the solution space
@@ -393,15 +391,15 @@ def main():
         try:
             fbaSolution, redMinmax = \
                 FvAnalyzer.parseSolutionFile(options.redFvaFile)
-        except IOError, strerror:
+        except IOError as strerror:
             print ("An error occurred while trying to read file %s:" %
                    os.path.basename(options.redFvaFile))
-            print strerror
+            print(strerror)
             exit()
-        except SyntaxError, strerror:
+        except SyntaxError as strerror:
             print ("Error in FVA solution file %s:" %
                    os.path.basename(options.redFvaFile))
-            print strerror
+            print(strerror)
             exit()
 
         if not fbaSolution.hasSameReactions(model):
@@ -424,15 +422,15 @@ def main():
         try:
             fbaSolution, wmomaMinmax = \
                 FvAnalyzer.parseSolutionFile(options.wMomaFvaFile)
-        except IOError, strerror:
+        except IOError as strerror:
             print ("An error occurred while trying to read file %s:" %
                    os.path.basename(options.wMomaFvaFile))
-            print strerror
+            print(strerror)
             exit()
-        except SyntaxError, strerror:
+        except SyntaxError as strerror:
             print ("Error in FVA solution file %s:" %
                    os.path.basename(options.wMomaFvaFile))
-            print strerror
+            print(strerror)
             exit()
 
         if not fbaSolution.hasSameReactions(model):
@@ -441,49 +439,49 @@ def main():
             exit()
 
         weights = MomaAnalyzer.getWeightsFromFluxVar(model, wmomaMinmax,
-                                                    options.alpha, options.beta)
+                                                     options.alpha, options.beta)
 
     # 7. Perform MOMA against the wildtype solution on the metabolic network
 
     moma = MomaAnalyzer(options.solver)
     if options.wMomaFvaFile:
-        print "Performing wMOMA with alpha = %g, beta = %g." % (options.alpha,
-                                                                options.beta)
+        print("Performing wMOMA with alpha = %g, beta = %g." % (options.alpha,
+                                                                options.beta))
         distance, solution, status, ndim = moma.runOnModel(model, wtFlux,
-            linConstraints, options.numIter, weights, blockedReactions)
+                                                           linConstraints, options.numIter, weights, blockedReactions)
     else:
-        print "Performing MOMA..."
+        print("Performing MOMA...")
         distance, solution, status, ndim = moma.runOnModel(model, wtFlux,
-            linConstraints, options.numIter, blockedReactions=blockedReactions)
+                                                           linConstraints, options.numIter, blockedReactions=blockedReactions)
 
     # Show warning and info messages of parsers
     msgs = (rparser.getMessages() + pparser.getMessages() +
             [x[1] for x in model_messages])
     if msgs:
-        print '\n'+'\n'.join(msgs)
+        print('\n'+'\n'.join(msgs))
     print ("Info: The reduced network has %u reactions and %u metabolites." %
            ndim[1::-1])
-    print "Solver status:", printStatus(status)
+    print("Solver status:", printStatus(status))
 
     # 8. Write output to file
 
     if len(solution) != 0:
-        print "\nOptimal value of objective function:", distance
+        print("\nOptimal value of objective function:", distance)
         diff = sum(solution.strictSqDiff(wtFlux).fluxDict.values())
-        print "\nSquared distance to wildtype solution:", diff
+        print("\nSquared distance to wildtype solution:", diff)
         if model.biomass_name:
-            print "Biomass:", solution[model.biomass_name]
-        print "Total absolute flux:",
-        print abs(array(solution.fluxDict.values())).sum()
+            print("Biomass:", solution[model.biomass_name])
+        print("Total absolute flux:", end=' ')
+        print(abs(array(list(solution.fluxDict.values()))).sum())
         try:
             solution.writeToFile(options.outputFile)
-        except IOError, strerror:
+        except IOError as strerror:
             print ("Unable to write to file %s:" %
                    os.path.basename(options.outputFile))
-            print strerror
+            print(strerror)
             exit()
     else:
-        print "No output written."
+        print("No output written.")
         exit()
 
 
