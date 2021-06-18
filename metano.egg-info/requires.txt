@@ -1,0 +1,8 @@
+numpy
+swiglpk
+pymprog>=1.0
+ecos
+scipy
+openopt
+cvxpy
+cvxopt

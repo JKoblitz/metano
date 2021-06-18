@@ -1,0 +1,21 @@
+[console_scripts]
+deadends.py = metano.deadends:main
+fba.py = metano.fba:main
+fva.py = metano.fva:main
+knockout.py = metano.knockout:main
+mfba.py = metano.mfba:main
+mfm.py = metano.mfm:main
+modelassert.py = metano.modelassert:main
+moma.py = metano.moma:main
+moment.py = metano.moment:main
+sbmlparser.py = metano.sbmlparser:main
+sbmlwriter.py = metano.sbmlwriter:main
+splitratios.py = metano.splitratios:main
+to_check_constraints.py = metano.to_check_constraints:main
+to_diff_solutions.py = metano.to_diff_solutions:main
+to_evaluate_objective.py = metano.to_evaluate_objective:main
+to_fix_names.py = metano.to_fix_names:main
+to_list_active_metab.py = metano.to_list_active_metab:main
+to_rea2m.py = metano.to_rea2m:main
+to_scatterplot.py = metano.to_scatterplot:main
+
