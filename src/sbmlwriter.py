@@ -151,6 +151,8 @@ class SbmlWriter(object):
             infinityVal = -1.*infinityVal
         self.infinityVal = infinityVal
 
+        self.sbmlTree = None
+
     def clear(self):
         """ clear all internal variables, warnings and info messages
         """
@@ -340,28 +342,28 @@ class SbmlWriter(object):
     def writeFile(self, sbmlFileName):
         """ write prepared structures to file designated by sbmlFileName
         """
-        sbmlTree = dom.Document()
+        self.sbmlTree = dom.Document()
 
-        sbml = dom.Element(SbmlDef.SBML)
+        sbml = self.sbmlTree.createElement(SbmlDef.SBML)
         sbml.setAttribute(SbmlDef.LEVEL, "3")
         sbml.setAttribute(SbmlDef.VERSION, "1")
         sbml.setAttribute(SbmlDef.XMLNS, SbmlExportStruc.SBML_URL)
         sbml.setAttribute(SbmlExportStruc.XMLNS_HTML,
                           SbmlExportStruc.XHTML_URL)
 
-        model = dom.Element(SbmlDef.MODEL)
+        model = self.sbmlTree.createElement(SbmlDef.MODEL)
         model.setAttribute(
             SbmlDef.ID, removeInvalidIdCharacters(self.modelName))
         model.setAttribute(SbmlDef.NAME, self.modelName)
 
         # Write unit definition
-        listOfUnitDefinitions = dom.Element(SbmlDef.LISTOFUNITDEFINITIONS)
-        unitDefinition = dom.Element(SbmlDef.UNITDEFINITION)
+        listOfUnitDefinitions = self.sbmlTree.createElement(SbmlDef.LISTOFUNITDEFINITIONS)
+        unitDefinition = self.sbmlTree.createElement(SbmlDef.UNITDEFINITION)
         unitDefinition.setAttribute(
             SbmlDef.ID, removeInvalidIdCharacters(SbmlExportStruc.THE_FLUX_UNIT))
-        listOfUnits = dom.Element(SbmlDef.LISTOFUNITS)
+        listOfUnits = self.sbmlTree.createElement(SbmlDef.LISTOFUNITS)
         for u in SbmlExportStruc.UNITS:
-            unit = dom.Element(SbmlDef.UNIT)
+            unit = self.sbmlTree.createElement(SbmlDef.UNIT)
             for attr in u:
                 unit.setAttribute(attr, u[attr])
             listOfUnits.appendChild(unit)
@@ -370,9 +372,9 @@ class SbmlWriter(object):
         model.appendChild(listOfUnitDefinitions)
 
         # Write compartments
-        listOfCompartments = dom.Element(SbmlDef.LISTOFCOMPARTMENTS)
+        listOfCompartments = self.sbmlTree.createElement(SbmlDef.LISTOFCOMPARTMENTS)
         for compartment in self.compartments:
-            element = dom.Element(SbmlDef.COMPARTMENT)
+            element = self.sbmlTree.createElement(SbmlDef.COMPARTMENT)
             element.setAttribute(
                 SbmlDef.ID, removeInvalidIdCharacters(compartment))
             element.setAttribute(SbmlDef.CONSTANT, "true")
@@ -380,13 +382,13 @@ class SbmlWriter(object):
         model.appendChild(listOfCompartments)
 
         # Create list of species
-        listOfSpecies = dom.Element(SbmlDef.LISTOFSPECIES)
+        listOfSpecies = self.sbmlTree.createElement(SbmlDef.LISTOFSPECIES)
         for i in range(len(self.metabolites)):
             metabolite = self.metabolites[i]
             metaboliteLabel = self.metaboliteLabels[i]
             metaboliteCompartment = self.metaboliteCompartment[metabolite]
             boundaryCondition = self._encodeBool[self.isBoundary[metabolite]]
-            species = dom.Element(SbmlDef.SPECIES)
+            species = self.sbmlTree.createElement(SbmlDef.SPECIES)
             species.setAttribute(
                 SbmlDef.ID, removeInvalidIdCharacters(metabolite))
             species.setAttribute(SbmlDef.NAME, metaboliteLabel)
@@ -411,14 +413,14 @@ class SbmlWriter(object):
         model.appendChild(listOfReactions)
 
         sbml.appendChild(model)
-        sbmlTree.appendChild(sbml)
+        self.sbmlTree.appendChild(sbml)
 
         # Write tree to file
         with open(sbmlFileName, 'w') as f:
-            sbmlTree.writexml(f, "", '\t', '\n', SbmlExportStruc.ENCODING)
+            self.sbmlTree.writexml(f, "", '\t', '\n', SbmlExportStruc.ENCODING)
 
     def _createListOfReactions(self):
-        listOfReactions = dom.Element(SbmlDef.LISTOFREACTIONS)
+        listOfReactions = self.sbmlTree.createElement(SbmlDef.LISTOFREACTIONS)
         fluxVec = self.fluxes.getVecOrderedByDict(self.reactionIndex)
         hasFluxes = len([f for f in fluxVec if f is not None]) != 0
         if self.fluxes and not hasFluxes:
@@ -434,7 +436,7 @@ class SbmlWriter(object):
             reactionName = rea_item.name
             reactionLabel = self.reactionLabels[i]
             reversible = self._encodeBool[rea_item.direction == 0]
-            reaction = dom.Element(SbmlDef.REACTION)
+            reaction = self.sbmlTree.createElement(SbmlDef.REACTION)
             reaction.setAttribute(
                 SbmlDef.ID, removeInvalidIdCharacters(reactionName))
             reaction.setAttribute(SbmlDef.NAME, reactionLabel)
@@ -465,9 +467,9 @@ class SbmlWriter(object):
             if not self.stripComments:
                 comments = str(rea_item.comment).splitlines()
                 if len(comments) > 0:
-                    notes = dom.Element(SbmlDef.NOTES)
+                    notes = self.sbmlTree.createElement(SbmlDef.NOTES)
                     for line in comments:
-                        paragraph = dom.Element(SbmlExportStruc.HTML_P)
+                        paragraph = self.sbmlTree.createElement(SbmlExportStruc.HTML_P)
                         t = dom.Text()
                         t.data = line.strip()
                         paragraph.appendChild(t)
@@ -485,23 +487,23 @@ class SbmlWriter(object):
                 reaction.appendChild(listOfProducts)
 
             # Create kineticLaw for reaction
-            kineticLaw = dom.Element(SbmlDef.KINETICLAW)
+            kineticLaw = self.sbmlTree.createElement(SbmlDef.KINETICLAW)
 
-            math = dom.Element(SbmlDef.MATH)
+            math = self.sbmlTree.createElement(SbmlDef.MATH)
             math.setAttribute(SbmlDef.XMLNS, SbmlExportStruc.MATH_URL)
             # ===================================================================
-            # ci = dom.Element(SbmlDef.CI)
+            # ci = self.sbmlTree.createElement(SbmlDef.CI)
             # t = dom.Text()
             # t.data = "%s" % SbmlDef.P_FLUX_VALUE
             # ci.appendChild(t)
             # math.appendChild(ci)
             # ===================================================================
-            cn = dom.Element(SbmlDef.CN)
+            cn = self.sbmlTree.createElement(SbmlDef.CN)
             t = dom.Text()
 
             # Write listOfParameters with lower bound, upper bound, objective
             # coefficient, and flux value
-            listOfParameters = dom.Element(SbmlDef.LISTOFPARAMETERS)
+            listOfParameters = self.sbmlTree.createElement(SbmlDef.LISTOFPARAMETERS)
             paramMsg = "Debug: Parameters: "
 
             if self.infinityVal or tmp_lb != -inf:
@@ -511,7 +513,7 @@ class SbmlWriter(object):
                 else:
                     lb = -1*self.infinityVal
 
-                parameter = dom.Element(SbmlDef.PARAMETER)
+                parameter = self.sbmlTree.createElement(SbmlDef.PARAMETER)
                 parameter.setAttribute(
                     SbmlDef.ID, removeInvalidIdCharacters(SbmlDef.P_LOWER_BOUND))
                 # parameter.setAttribute(SbmlDef.CONSTANT, "true") # Change in SBML V3
@@ -531,7 +533,7 @@ class SbmlWriter(object):
                 else:
                     ub = self.infinityVal
 
-                parameter = dom.Element(SbmlDef.PARAMETER)
+                parameter = self.sbmlTree.createElement(SbmlDef.PARAMETER)
                 parameter.setAttribute(
                     SbmlDef.ID, removeInvalidIdCharacters(SbmlDef.P_UPPER_BOUND))
                 # parameter.setAttribute(SbmlDef.CONSTANT, "true") # Change in SBML V3
@@ -546,7 +548,7 @@ class SbmlWriter(object):
 
             if self.objCoef:
                 coef = self.objCoef[i]
-                parameter = dom.Element(SbmlDef.PARAMETER)
+                parameter = self.sbmlTree.createElement(SbmlDef.PARAMETER)
                 parameter.setAttribute(
                     SbmlDef.ID, removeInvalidIdCharacters(SbmlDef.P_OBJ_COEF))
                 # parameter.setAttribute(SbmlDef.CONSTANT, "true") # Change in SBML V3
@@ -556,7 +558,7 @@ class SbmlWriter(object):
                 paramMsg += ", %s: %r" % (SbmlDef.P_OBJ_COEF, coef)
 
             if tmp_flux is not None:
-                parameter = dom.Element(SbmlDef.PARAMETER)
+                parameter = self.sbmlTree.createElement(SbmlDef.PARAMETER)
                 parameter.setAttribute(
                     SbmlDef.ID, removeInvalidIdCharacters(SbmlDef.P_FLUX_VALUE))
                 # parameter.setAttribute(SbmlDef.CONSTANT, "true") # Change in SBML V3
@@ -595,9 +597,9 @@ class SbmlWriter(object):
 
         Returns SBML node with the given type
         """
-        listOfSpeciesRef = dom.Element(typ)
+        listOfSpeciesRef = self.sbmlTree.createElement(typ)
         for r in reactants:
-            reactant = dom.Element(SbmlDef.SPECIESREFERENCE)
+            reactant = self.sbmlTree.createElement(SbmlDef.SPECIESREFERENCE)
             reactant.setAttribute(
                 SbmlDef.SPECIES, removeInvalidIdCharacters(r.name))
             reactant.setAttribute(SbmlDef.CONSTANT, "false")
